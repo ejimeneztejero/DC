@@ -6,23 +6,24 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine solver(iDC,nSS,nxx,nySou,nyRec,dt,nt,&
-	S,d,ny,nx,ctmp,shot_synth)
+subroutine solver(iDC,nSS,nxx,nySou,nyRec,S,ny,nx,ctmp,shot_synth)
+
+USE mod_parfile, only: dt,nt,dmodel
 
 implicit none
 
 	!! Forward propagation
 
 	!!!! Simulation Geometry
-	integer i,nt,ny,nx,j,k,dn,ix
+	integer i,ny,nx,j,k,dn,ix
 	integer k1,k2,iDC,nSS
-	integer l,m,acc,FS
+	integer l,m,acc
 	integer dPML,dny,dnx,dny2,nxt,nyt
 	integer nxx(nSS),nySou(nSS),nyRec(nSS)
 	integer nxreco(nSS),nyreco(nSS)
 
 	!!!! Simulation parameters
-	real dt,d,ctmp(ny,nx)
+	real ctmp(ny,nx)
 	real S(nt,nSS),shot_synth(nt,nSS)
 	integer, allocatable :: nxs(:),nys(:)
 	real, allocatable :: coef1(:),coef2(:)
@@ -84,7 +85,6 @@ implicit none
 
 	acc=3
 	dPML=20		!! PML layers and points discretization
-	FS=1
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -92,14 +92,8 @@ implicit none
 	
 	dn=dPML+2*acc
 	dnx=dn
-	dny=dn
-	
-        if(FS.eq.1)   then
-                dny2=3+2*acc
-        endif
-	if(FS.eq.0)   then
-                dny2=dn
-        endif
+	dny=dn	
+        dny2=3+2*acc
 
 	allocate(nxs(nSS),nys(nSS))
 	nxs=dnx+nxx
@@ -119,12 +113,12 @@ implicit none
 	source=0.;p_1=0.;p=0.;p_3=0.;
 
 	allocate(c(nyt,nxt),c2(nyt,nxt))
-	c=0.;c2=0.; !!6
+	c=0.;c2=0.; 
 
 	allocate(deriv2_p_y(nyt,nxt),deriv2_p_x(nyt,nxt))
 	allocate(deriv_p_y(nyt,nxt),deriv_p_x(nyt,nxt))		
 	deriv2_p_y=0.;deriv2_p_x=0.;
-	deriv_p_y=0.;deriv_p_x=0.;	!!16	
+	deriv_p_y=0.;deriv_p_x=0.;	
 			
 	!!! Variables PML
 	allocate(x_prop_pml(ny,dn),y_prop_pml(dn,nx),corner_prop_pml(dn,dn))
@@ -134,8 +128,8 @@ implicit none
 	allocate(lu_factorA(dn,dn),lu_factorB(dn,dn),ru_factorA(dn,dn),ru_factorB(dn,dn))
 	allocate(ld_factorA(dn,dn),ld_factorB(dn,dn),rd_factorA(dn,dn),rd_factorB(dn,dn))
 	factorA=0.;factorB=0.;
-	lu_factorA=0;lu_factorB=0;ru_factorA=0;ru_factorB=0;!!8
-	ld_factorA=0;ld_factorB=0;rd_factorA=0;rd_factorB=0;!!8
+	lu_factorA=0;lu_factorB=0;ru_factorA=0;ru_factorB=0;
+	ld_factorA=0;ld_factorB=0;rd_factorA=0;rd_factorB=0;
 	
 	!!! Variables PML y	
 	allocate(yu_pml_p_1(dn,nx),yu_pml_p(dn,nx),yu_pml_p_3(dn,nx))
@@ -258,23 +252,23 @@ implicit none
 	enddo
 
 	do i=dny2+ny+1,dny2+ny+dny
-	c(i,dn+1:dnx+nx)=ctmp(ny,:);		!! 4
+	c(i,dn+1:dnx+nx)=ctmp(ny,:);		
 	do j=1,dn
-		c(i,j)=ctmp(ny,1);		!! 5
-		c(i,dnx+nx+j)=ctmp(ny,nx);	!! 6
+		c(i,j)=ctmp(ny,1);		
+		c(i,dnx+nx+j)=ctmp(ny,nx);	
 	enddo
 	enddo
 	
 	do i=1,dnx
-		c(dny2+1:dny2+ny,i)=ctmp(:,1);		!! capa xl
-		c(dny2+1:dny2+ny,dnx+nx+i)=ctmp(:,nx);	!!capa xr
+		c(dny2+1:dny2+ny,i)=ctmp(:,1);		!!layer xl
+		c(dny2+1:dny2+ny,dnx+nx+i)=ctmp(:,nx);	!!layer xr
 	enddo
 	
-	c2=c**2*dt**2/d**2;
+	c2=c**2*dt**2/dmodel**2;
 	
 !!!!!!!!!!!!!!   PML'S ABSORTION COEFFICIENTS   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-	call PML_coeffs(acc,dPML,dt,d,dn,factorA,factorB,&
+	call PML_coeffs(acc,dPML,dt,dmodel,dn,factorA,factorB,&
 	ld_factorA,rd_factorA,lu_factorA,ru_factorA,ld_factorB,rd_factorB,lu_factorB,ru_factorB)
 	
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -322,33 +316,6 @@ implicit none
 	deriv_p_y,deriv2_p_y,yd_phi_p_y,yd_phi_p_y_1,yd_chi_p_y,yd_chi_p_y_1,y_prop_pml)		
 	yd_pml_p_3=-yd_pml_p_1+2*yd_pml_p+(deriv2_p_x(yd,mx)+deriv2_p_y(yd,mx)+y_prop_pml)*c2(yd,mx)
 		
-	if(FS.eq.0)	then
-
-	call pml_matrices_y(2,acc,coef1,dn,nx,nyt,nxt,yu,mx,factorA,factorB,&
-	deriv_p_y,deriv2_p_y,yu_phi_p_y,yu_phi_p_y_1,yu_chi_p_y,yu_chi_p_y_1,y_prop_pml)
-	yu_pml_p_3=-yu_pml_p_1+2*yu_pml_p+(deriv2_p_x(yu,mx)+deriv2_p_y(yu,mx)+y_prop_pml)*c2(yu,mx)
-
-!!!!	PML corner up CALCULATION
-
-	call pml_matrices_xycorner(1,acc,coef1,dn,dn,nyt,nxt,yu,xl,lu_factorA,lu_factorB,&
-	deriv_p_x,deriv2_p_x,lu_phi_p_x,lu_phi_p_x_1,lu_chi_p_x,lu_chi_p_x_1,corner_prop_pml)
-	lu_pml_p_3=-lu_pml_p_1+2*lu_pml_p+(deriv2_p_x(yu,xl)+deriv2_p_y(yu,xl)+corner_prop_pml)*c2(yu,xl)
-		
-	call pml_matrices_xycorner(2,acc,coef1,dn,dn,nyt,nxt,yu,xl,lu_factorA,lu_factorB,&
-	deriv_p_y,deriv2_p_y,lu_phi_p_y,lu_phi_p_y_1,lu_chi_p_y,lu_chi_p_y_1,corner_prop_pml)
-	lu_pml_p_3=lu_pml_p_3+c2(yu,xl)*corner_prop_pml
-
-	call pml_matrices_xycorner(1,acc,coef1,dn,dn,nyt,nxt,yu,xr,ru_factorA,ru_factorB,&
-	deriv_p_x,deriv2_p_x,ru_phi_p_x,ru_phi_p_x_1,ru_chi_p_x,ru_chi_p_x_1,corner_prop_pml)
-	ru_pml_p_3=-ru_pml_p_1+2*ru_pml_p+c2(yu,xr)*&
-	(deriv2_p_x(yu,xr)+deriv2_p_y(yu,xr)+corner_prop_pml)
-				
-	call pml_matrices_xycorner(2,acc,coef1,dn,dn,nyt,nxt,yu,xr,ru_factorA,ru_factorB,&
-	deriv_p_y,deriv2_p_y,ru_phi_p_y,ru_phi_p_y_1,ru_chi_p_y,ru_chi_p_y_1,corner_prop_pml)
-	ru_pml_p_3=ru_pml_p_3+c2(yu,xr)*corner_prop_pml
-				
-	endif
-	
 !!!	PML corner down CALCULATION
 			
 	call pml_matrices_xycorner(1,acc,coef1,dn,dn,nyt,nxt,yd,xl,ld_factorA,ld_factorB,&
@@ -367,23 +334,13 @@ implicit none
 	deriv_p_y,deriv2_p_y,rd_phi_p_y,rd_phi_p_y_1,rd_chi_p_y,rd_chi_p_y_1,corner_prop_pml)
 	rd_pml_p_3=rd_pml_p_3+c2(yd,xr)*corner_prop_pml
 
-!!!	Free	surface
-
-	if(FS.eq.1)	then
 	
-                p_3(1:dny2,:)=0.
+        p_3(1:dny2,:)=0.
 
-		yu_pml_p_3(1:dny2,:)=0.
-		lu_pml_p_3(1:dny2,:)=0.
-		ru_pml_p_3(1:dny2,:)=0.
-	
-!		do j=1,dny2
-!			yu_pml_p_3(j,:)=-p_3(dny2+2-(j-dny2),mx)
-!			lu_pml_p_3(j,:)=-p_3(dny2+2-(j-dny2),xl)
-!			ru_pml_p_3(j,:)=-p_3(dny2+2-(j-dny2),xr)
-!		enddo
+	yu_pml_p_3(1:dny2,:)=0.
+	lu_pml_p_3(1:dny2,:)=0.
+	ru_pml_p_3(1:dny2,:)=0.	
 
-	endif
 
 	p_3(my,mx)=-p_1(my,mx)+p(my,mx)*2.+&
 	(deriv2_p_x(my,mx)+deriv2_p_y(my,mx)+source(my,mx))*c2(my,mx)
@@ -576,12 +533,12 @@ real coef(accuracy+1)
 return
 end
 	
-	subroutine PML_coeffs(acc,dPML,dt,d,dn,factorA,factorB,&
+	subroutine PML_coeffs(acc,dPML,dt,dmodel,dn,factorA,factorB,&
 	ld_factorA,rd_factorA,lu_factorA,ru_factorA,ld_factorB,rd_factorB,lu_factorB,ru_factorB)
 	implicit none
 
 	integer dn,dPML,acc,i,j,ix
-	real pi,dt,d,Refl,wPML
+	real pi,dt,dmodel,Refl,wPML
 	real factorA(dn),factorB(dn)
 	real lu_factorA(dn,dn),lu_factorB(dn,dn),ru_factorA(dn,dn),ru_factorB(dn,dn)
 	real ld_factorA(dn,dn),ld_factorB(dn,dn),rd_factorA(dn,dn),rd_factorB(dn,dn)
@@ -591,10 +548,10 @@ end
 
 	pi=3.14159265			
 	Refl=0.0000001
-	wPML=(dPML-1)*d
+	wPML=(dPML-1)*dmodel
 
 	do i=1+acc,dPML+acc	!!from interior to exterior
-		yPML(i)=(i-(acc+1))*d
+		yPML(i)=(i-(acc+1))*dmodel
 		alpha(i)=30.*pi*(1.-(yPML(i)/wPML)**1)
 		sigma(i)=(-(2+1)*2000*log(Refl)/(2.*wPML))*(yPML(i)/wPML)**2
 	enddo	

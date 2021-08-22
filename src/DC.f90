@@ -232,9 +232,7 @@ ddy=1+floor(added_space_model_Y/dmodel) !!added model space in y-axis (points)
 	nxx=nxRec-(x_i-1);
 	nys=nySou-(y_i-1);nyr=nyRec-(y_i-1);
 
-	call solver(iDC,nSS,nxx,nys,nyr,dt,nt,&
-	source,dmodel,ny_DC,nx_DC,model,output)
-
+	call solver(iDC,nSS,nxx,nys,nyr,source,ny_DC,nx_DC,model,output)
 
 deallocate(nxSou,nySou,nxRec,nyRec)
 deallocate(nxx,nys,nyr)
