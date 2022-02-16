@@ -119,15 +119,15 @@ include 'mpif.h'
 
         datum1_shot=1+ceiling(shot_depth/dmodel)        !! superficie 1 shots
         datum1_rec=1+ceiling(streamer_depth/dmodel)     !! superficie 1 receivers
-        datum2=1+bat_model_grid                         !! superficie 2
+        datum2=bat_model_grid                         	!! superficie 2
 
         ny=maxval(datum2)
-
-	call allocate_input_arrays(2)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!     Superficies datum1 y datum2
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+	call allocate_input_arrays(2)
 
         DC_model=water_velocity
 
@@ -214,7 +214,8 @@ implicit none
 	call INTRPL(NumBat+2,xmodel_,xbat_,nmodel,xmodel,bat_model,ERR)
 
 	do j=1,nmodel
-		bat_model_grid(j)=1+nint(bat_model(j)/dmodel)
+!		bat_model_grid(j)=1+nint(bat_model(j)/dmodel)
+		bat_model_grid(j)=1+ceiling(bat_model(j)/dmodel)
 	enddo
 
 	if(rank.eq.0)	then
@@ -324,7 +325,8 @@ implicit none
 
                 pos_shot(ii) = add1+sqrt((xs-x1)**2.+(ys-y1)**2.) !! distancia entre cada shot y el primero
 
-                pos_shot_grid(ii)=1+nint(pos_shot(ii)/dmodel)
+!                pos_shot_grid(ii)=1+nint(pos_shot(ii)/dmodel)
+                pos_shot_grid(ii)=1+ceiling(pos_shot(ii)/dmodel)
 
                 if(bat.ne.bat.or.bat.eq.0)      then    !localiza NaN y CEROS
                         bat=0
@@ -352,14 +354,16 @@ implicit none
 		endif
 
                 do itr=1,NumRec
-                        pos_trace_grid(itr,ii)=1+nint(pos_trace(itr,ii)/dmodel)
+!                        pos_trace_grid(itr,ii)=1+nint(pos_trace(itr,ii)/dmodel)
+                        pos_trace_grid(itr,ii)=1+ceiling(pos_trace(itr,ii)/dmodel)
                 enddo
 
         enddo
 
 	length_model=pos_shot(NumShots)+added_space_model_X	!!metros
 
-        nmodel=1+nint(length_model/dmodel)	!!puntos
+!        nmodel=1+nint(length_model/dmodel)	!!puntos
+        nmodel=1+ceiling(length_model/dmodel)	!!puntos
 
 	CLOSE(10)
 
@@ -690,9 +694,10 @@ implicit none
 
 	ERR=0
 
-	addx=nint(add1/dmodel)
-
-	ddx=1+floor(added_space_model_X/dmodel)
+!	addx=nint(add1/dmodel)
+!	ddx=1+floor(added_space_model_X/dmodel)
+	addx=ceiling(add1/dmodel)
+	ddx=1+ceiling(added_space_model_X/dmodel)
 
 	nxx=NumShots
 	nyy=ny
@@ -831,7 +836,8 @@ implicit none
 
 	enddo
 
-	npos= 1+nint( (pos_shot(NumShots)-pos_shot(1))/dmodel )
+!	npos= 1+nint( (pos_shot(NumShots)-pos_shot(1))/dmodel )
+	npos= 1+ceiling( (pos_shot(NumShots)-pos_shot(1))/dmodel )
 	allocate(xpos(npos),vpm4(ny,npos))
 
 	do i=1,npos

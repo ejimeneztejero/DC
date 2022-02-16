@@ -14,6 +14,7 @@ implicit none
   ! Control file variables
   integer, parameter :: unit0=100,unit_DC0=200
   integer, parameter :: unit_DC1=300,unit_DC2=400
+  integer, parameter :: unit_DC1_corr=700,unit_DC2_corr=800
   integer, parameter :: unit_PG1=500,unit_PG2=600
   
   integer :: DC,reverse_streamer
@@ -26,19 +27,24 @@ implicit none
   integer :: sx_sy_header,offset_header
   integer :: TWT_option,split_parts
   integer :: save_txt,step_txt
-  integer :: save_gnuplot_txt, save_matlab_txt
+  integer :: save_gnuplot_txt,save_matlab_txt
 
   integer :: NumMax_PG,NumMaxShots_PG
   integer :: maxbytes
+  integer :: phase_correction,filtering
   
   real :: dmodel,dt,near_offset,offset_unit,far_offset
   real :: shot_depth,streamer_depth
   real :: added_space_model_X,added_space_model_Y,water_velocity
   real :: dshots,drec,time
+  real :: land_velocity
+
+  real :: f1,f2
 
   character(len=500) :: folder_input,folder_output
   character(len=500) :: su_file0,su_file_DC0
   character(len=500) :: su_file_DC1,su_file_DC2
+  character(len=500) :: su_file_DC1_corr,su_file_DC2_corr
   character(len=500) :: su_file_PG1,su_file_PG2
   character(len=500) :: temp_DC1,temp_DC2
   character(len=500) :: temp_PG1,temp_PG2
@@ -96,6 +102,9 @@ implicit none
   su_file_DC1 = 'su_DC1_part_'
   su_file_DC2 = 'su_DC2_part_'
 
+  su_file_DC1_corr = 'su_DC1_corrected_part_'
+  su_file_DC2_corr = 'su_DC2_corrected_part_'
+
   su_file_PG1 = 'su_PG1_part_'
   su_file_PG2 = 'su_PG2_part_'
 
@@ -116,12 +125,14 @@ implicit none
   added_space_model_Y=0.
   far_offset=0.;far_offset_grid=0;
 
-  water_velocity=1500
+  land_velocity=0.
+  water_velocity=1500.
   drec=0;dmodel=0;dt=0;
   shot_depth=0;streamer_depth=0;
   NumRec=0;nt=0;split_parts=1;
-  DC=0;
-  step_txt=100;
+  DC=0;filtering=0;
+  step_txt=50;
+  f1=1.;f2=100.;
   save_gnuplot_txt=0;save_matlab_txt=0;
   open(fh, file=par_file)
 
@@ -171,6 +182,10 @@ implicit none
            read(buffer, *, iostat=ios) folder_output
         case ('dt:')
            read(buffer, *, iostat=ios) dt
+        case ('f1:')
+           read(buffer, *, iostat=ios) f1
+        case ('f2:')
+           read(buffer, *, iostat=ios) f2
         case ('drec:')
            read(buffer, *, iostat=ios) drec
         case ('dmodel:')
@@ -195,6 +210,12 @@ implicit none
            read(buffer, *, iostat=ios) streamer_depth
         case ('reverse_streamer:')
            read(buffer, *, iostat=ios) reverse_streamer
+        case ('phase_correction:')
+           read(buffer, *, iostat=ios) phase_correction
+        case ('filtering:')
+           read(buffer, *, iostat=ios) filtering
+        case ('land_velocity:')
+           read(buffer, *, iostat=ios) land_velocity
         case ('water_velocity:')
            read(buffer, *, iostat=ios) water_velocity
         case ('save_gnuplot_txt:')
@@ -232,7 +253,7 @@ far_offset_grid=1+ceiling(far_offset/dmodel)
 NumMaxShots_PG_=1+ceiling(far_offset/dshots)	!!numero maximo de shots por PG
 NumMaxShots_PG=NumMaxShots_PG_+ceiling(NumMaxShots_PG_/5.)
 
-NumMax_PG_=1+((NumShots-1)*dshots+far_offset)/dmodel
+NumMax_PG_=1+ceiling((NumShots-1)*dshots+far_offset)/dmodel
 NumMax_PG=NumMax_PG_+ceiling(NumMax_PG_/5.)
 
 if(added_space_model_X.eq.0)added_space_model_X=20.*dmodel
@@ -302,17 +323,26 @@ if(offset_header.eq.0.and.near_offset.eq.0)	then
 	stop
 endif
 
-if(DC.ne.0)    then
-if(DC.ne.1.and.DC.ne.2)    then
+if(phase_correction.ne.0.and.land_velocity.eq.0)	then
+	if(rank.eq.0)write(*,*)'ERROR: if phase_correction: 1, &
+	land_velocity cannot be 0, it should be set & 
+	to a certain value (in meters/second) in ',trim(adjustl(par_file))
+        if(rank.eq.0)call ascii_art(2)
 
-        if(rank.eq.0)write(*,*)'ERROR: wrong value for DC parameter. It must be 0, 1, or 2'
+        call MPI_barrier(MPI_COMM_WORLD,ierr)
+        call MPI_Abort(MPI_COMM_WORLD, errcode, ierr)
+	stop
+endif
+
+if(DC.gt.2)    then
+
+        if(rank.eq.0)write(*,*)'ERROR: wrong value for DC parameter. It must be negative, 0, 1, or 2'
         if(rank.eq.0)call ascii_art(2)
 
         call MPI_barrier(MPI_COMM_WORLD,ierr)
         call MPI_Abort(MPI_COMM_WORLD, errcode, ierr)
         stop
 
-endif
 endif
 
 file_name = trim(adjustl(folder_input))
@@ -327,7 +357,6 @@ if(.NOT.output_exist)     then
 	call MPI_Abort(MPI_COMM_WORLD, errcode, ierr)
 	stop
 endif
-
 
 if(.NOT.input_exist)     then
 

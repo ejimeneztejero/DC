@@ -203,7 +203,7 @@ do itimes=1,ntimes
                call WRITE_PG(1,icount,NumShots_PG(icount),unit_PG1,source)
 
 	endif !icount
-
+ 
 enddo !itimes
 
 deallocate(trace)

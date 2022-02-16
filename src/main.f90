@@ -16,7 +16,7 @@ USE mod_PG_arrays
 implicit none
 include 'mpif.h'
 
-integer :: iDC,i,output
+integer :: iDC,i,output,corr
 integer :: numtasks,rank,ierr,status(MPI_STATUS_SIZE)
 !!INTEGER ::  REQUEST, IERROR
 
@@ -71,11 +71,10 @@ if(rank.eq.0)write(*,*)'*******************************************'
 	call WRITE_SG0()
 	call MPI_barrier(MPI_COMM_WORLD,ierr)
 
-	if(save_txt.eq.1) then
-
+	if(save_txt.ne.0) then
+		corr=0
 		if(rank.eq.0)write(*,*)'SAVING TXT DATA'
-
-		call SAVE_SHOTS_TXT(iDC)
+		call SAVE_SHOTS_TXT(iDC,corr)
 
 	endif
 
@@ -103,13 +102,14 @@ if(rank.eq.0)write(*,*)'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 	datum1_rec,datum2)
 
         if(save_txt.eq.1) then
+		corr=0
                 if(rank.eq.0)write(*,*)'SAVING TXT DATA'
-                call SAVE_SHOTS_TXT(iDC)
+                call SAVE_SHOTS_TXT(iDC,corr)
         endif
 
-	endif
+	endif!DC=1
 
-endif
+endif!DC=0,DC=1
 
 if(DC.eq.2)        then
 
@@ -149,11 +149,49 @@ if(rank.eq.0)write(*,*)'}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
 	call MPI_barrier(MPI_COMM_WORLD,ierr)
 
         if(save_txt.eq.1) then
+		corr=0
                 if(rank.eq.0)write(*,*)'SAVING TXT DATA'
-                call SAVE_SHOTS_TXT(iDC)
+                call SAVE_SHOTS_TXT(iDC,corr)
         endif
 
 endif	!DC=2
+
+if(phase_correction.eq.1)	then
+
+	if(DC.eq.1.or.DC.eq.2)	then
+
+		iDC=DC
+	        if(rank.eq.0)write(*,*)
+	        if(rank.eq.0)write(*,*)'PHASE CORRECTION: ',iDC
+		call WRITE_CORR(iDC)
+
+		if(save_txt.eq.1) then
+			corr=1
+        		if(rank.eq.0)write(*,*)'SAVING TXT DATA'
+        		call SAVE_SHOTS_TXT(iDC,corr)
+		endif
+
+	endif
+
+	if(DC.lt.0)	then
+	
+		do iDC=2,2
+
+	        if(rank.eq.0)write(*,*)
+	        if(rank.eq.0)write(*,*)'PHASE CORRECTION: ',iDC
+		call WRITE_CORR(iDC)
+
+		if(save_txt.ne.0) then
+			corr=1
+        		if(rank.eq.0)write(*,*)'SAVING TXT DATA'
+        		call SAVE_SHOTS_TXT(iDC,corr)
+		endif
+
+		enddo
+
+	endif
+
+endif
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!! 			END DOWNWARD CONTINUATION

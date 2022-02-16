@@ -39,6 +39,7 @@ implicit none
         endif
 
 end subroutine fun_num_split
+
 SUBROUTINE READ_DATA(icount,unit_new,pos_byte,ifile,nSS,input)
 
 USE mod_parfile
@@ -157,7 +158,7 @@ USE mod_PG_arrays
 implicit none
 
 integer :: unit_PG
-integer :: i,j,jrec,k,ishot,iDC,icount
+integer :: i,j,jrec,k,ishot,iDC,icount,k1
 integer :: nSS,nh
 integer :: ifile_r,ifile_w
 
@@ -189,17 +190,21 @@ ifile_w=ifile_PG(icount)
 
 if(iDC.eq.1)	then
 do j=1,nSS
+
 	do k=1,nt
                 shot(k,j)=output(k,j) 
         enddo
+
 enddo
 endif
 
 if(iDC.eq.2)	then
 do j=1,nSS
+
 	do k=1,nt
-                shot(k,j)=output(nt-k+1,j) 
+                shot(k,j)=output(nt-k+k1,j) 
         enddo
+
 enddo
 endif
 
@@ -318,16 +323,17 @@ deallocate(sudata2)
 END SUBROUTINE write_SG0
 
 
-subroutine WRITE_SG(iDC,icount,nSS,unit_DC,SG)
+subroutine WRITE_SG(iDC,icount,correction,nSS,unit_DC,SG)
 
 USE mod_parfile
 USE mod_SG_arrays
 
 implicit none
 
-integer :: i,j,k,nh,it,iDC,icount
+integer :: i,j,k,nh,it,iDC,icount,k1
 integer :: ifile,unit_DC
 INTEGER :: jrec,kdc,nSS
+INTEGER :: correction
 INTEGER(4) :: pos_byte	
 
 real :: SG(nt,nSS)
@@ -353,9 +359,11 @@ do j=1,nSS
 enddo
 
 do j=1,nSS
+
 	do k=1,nt
-		shot(k,j)=SG(nt-k+1,j)
+		shot(k,j)=SG(nt-k+k1,j)
 	enddo
+
 enddo
 
 do j=1,nSS
@@ -373,7 +381,7 @@ deallocate(shot)
 END SUBROUTINE WRITE_SG
 
 
-subroutine SAVE_SHOTS_TXT(iDC)
+subroutine SAVE_SHOTS_TXT(iDC,corr)
 
 USE mod_parfile
 USE mod_input_arrays
@@ -386,7 +394,7 @@ include 'mpif.h'
 integer :: numtasks,rank,ierr,status(MPI_STATUS_SIZE)
 integer :: iDC,i,j,k,nsamples,ntimes
 integer :: ifile_r,itimes,nh,icount
-integer :: unit_DC,step
+integer :: unit_DC,step,corr
 integer(4) :: pos_r,pos_read,fldr
 
 character(len=50) :: Str0,Str_,Str_txt,Str_DC,Str
@@ -409,12 +417,25 @@ allocate(sudata(nt+nh,NumRec))
 allocate(SG(nt,NumRec))
 SG=0.;sudata=0.;
 
-if(iDC.eq.0)unit_DC=unit_DC0
-if(iDC.eq.1)unit_DC=unit_DC1
-if(iDC.eq.2)unit_DC=unit_DC2
+if(corr.eq.0)	then
 
-Str_gnu= 'gnuplot_shot_DC'
-Str_mat= 'matlab_shot_DC'
+	if(iDC.eq.0)unit_DC=unit_DC0
+	if(iDC.eq.1)unit_DC=unit_DC1
+	if(iDC.eq.2)unit_DC=unit_DC2
+	Str_gnu= 'gnuplot_shot_DC'
+	Str_mat= 'matlab_shot_DC'
+
+endif
+
+if(corr.ne.0)	then
+
+	if(iDC.eq.1)unit_DC=unit_DC1_corr
+	if(iDC.eq.2)unit_DC=unit_DC2_corr
+	Str_gnu= 'gnuplot_corrected_shot_DC'
+	Str_mat= 'matlab_corrected_shot_DC'
+
+endif
+
 write(Str_DC,*) iDC
 Str_= '_'
 Str_txt = '.txt'
@@ -433,7 +454,6 @@ if(numtasks.gt.1)	then
         endif
 
 endif
-
 
 step=floor(1.*NumShots/step_txt)
 allocate(period(step))
@@ -473,7 +493,7 @@ do itimes=1,ntimes
 
 		write(Str,*) shotID_su(icount)
 
-		if(save_matlab_txt.eq.1)	then
+		if(save_matlab_txt.ne.0)	then
 
 		file_name = trim(adjustl(folder_output)) // trim(adjustl(Str_mat))  
 		file_name2 = trim(adjustl(file_name)) // trim(adjustl(Str_DC))
@@ -490,7 +510,7 @@ do itimes=1,ntimes
 
 		endif	!matlab
 
-		if(save_gnuplot_txt.eq.1)	then
+		if(save_gnuplot_txt.ne.0)	then
 
 		file_name = trim(adjustl(folder_output)) // trim(adjustl(Str_gnu))  
 		file_name2 = trim(adjustl(file_name)) // trim(adjustl(Str_DC))
@@ -745,16 +765,42 @@ enddo
 
 endif
 
+if(phase_correction.eq.1)	then
+
+do ifile=1,split_parts
+
+       	call fun_num_split(split_parts,ifile,num_split)
+
+	if(DC.eq.1.or.DC.lt.0)	then
+
+        file_name = trim(adjustl(su_file_DC1_corr)) // trim(adjustl(num_split))
+        file_name = trim(adjustl(folder_output)) // trim(adjustl(file_name))
+        open(unit_DC1_corr+ifile,FILE=file_name,ACCESS=access,FORM=form,CONVERT='BIG_ENDIAN',STATUS='unknown')
+
+	endif
+
+	if(DC.eq.2.or.DC.lt.0)	then
+
+        file_name = trim(adjustl(su_file_DC2_corr)) // trim(adjustl(num_split))
+        file_name = trim(adjustl(folder_output)) // trim(adjustl(file_name))
+        open(unit_DC2_corr+ifile,FILE=file_name,ACCESS=access,FORM=form,CONVERT='BIG_ENDIAN',STATUS='unknown')
+
+	endif
+
+enddo
+
+endif
+
 !maxbytes=maxval(sizeof(:))
 
 END SUBROUTINE open_su_files
+
 subroutine close_su_files()
 USE mod_parfile
 
 implicit none
 
 INTEGER :: k
-
 
 do k=1,split_parts
         close(unit_DC0+k)
@@ -764,5 +810,165 @@ do k=1,split_parts
         close(unit_PG2+k)
 enddo
 
+if(phase_correction.eq.1)	then
+
+	do k=1,split_parts
+	        if(DC.lt.0.or.DC.eq.1)close(unit_DC1_corr+k)
+	        if(DC.lt.0.or.DC.eq.2)close(unit_DC2_corr+k)
+	enddo
+
+endif
 
 end subroutine close_su_files
+
+subroutine WRITE_CORR(iDC)
+
+USE mod_parfile
+USE mod_SG_arrays
+
+implicit none
+include 'mpif.h'
+
+integer :: numtasks,rank,ierr,status(MPI_STATUS_SIZE)
+
+integer :: i,j,k,nh,it,iDC,ishot,k1,i1,i2
+integer :: ifile,FA_error
+integer :: itimes,ntimes,nsamples
+integer :: unit_read,unit_write
+INTEGER(4) :: pos_r, pos_w, pos_byte
+
+real    :: FA_st,FA_obs,FA_dc
+real    :: t_1,t_2,depth_st,depth_shot
+REAL(4), ALLOCATABLE :: sudata(:,:),input(:,:),shot(:,:)
+
+CHARACTER(len=500) :: file_new
+
+nh = 60 ! Size su header = 60*4 bytes
+
+ALLOCATE(sudata(nh+nt,NumRec))
+ALLOCATE(input(nt,NumRec))
+ALLOCATE(shot(nt,NumRec))
+
+call MPI_COMM_SIZE(MPI_COMM_WORLD,numtasks,ierr)
+call MPI_COMM_RANK(MPI_COMM_WORLD,rank,ierr)
+ierr=0;
+
+if(iDC.eq.1)	then
+	unit_read=unit_DC1
+	unit_write=unit_DC1_corr
+endif
+
+if(iDC.eq.2)	then
+	unit_read=unit_DC2
+	unit_write=unit_DC2_corr
+endif
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!     MAIN LOOP DC
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+nsamples=NumShots
+
+ntimes=nsamples
+if(numtasks.gt.1)	then
+
+        if(nsamples.gt.numtasks)        then
+                ntimes=ceiling(1.*nsamples/numtasks)
+        endif
+
+	if(nsamples.le.numtasks)        then
+                ntimes=1
+        endif
+
+endif
+
+if(numtasks.eq.1.and.nsamples.gt.1) write(*,*)'NO PARALELIZATION, BAD IDEA'
+
+do itimes=1,ntimes
+
+ishot=(itimes-1)*numtasks+rank+1        !!aquí sucede la paralelización
+
+i1=(itimes-1)*numtasks+1
+i2=itimes*numtasks
+if(i2.gt.nsamples)i2=nsamples
+
+if(ishot.le.nsamples)     then
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!     Calculo error de fase
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+	FA_error=1
+	ifile=ifile_su(ishot)
+        pos_byte=pos_byte_su(ishot)
+
+	sudata=0.;shot=0.;
+
+        depth_st=abs(pos_bat(ishot)-streamer_depth)
+	depth_shot=abs(pos_bat(ishot)-shot_depth)
+
+        FA_st=sqrt((near_offset/2)**2.+depth_st**2.)+ &
+        sqrt((near_offset/2)**2.+depth_shot**2.)
+        FA_st=FA_st*(1./water_velocity) !!real
+
+        FA_obs = sqrt(near_offset**2.+depth_shot**2.)*(1./water_velocity) !!real
+        FA_dc= near_offset/land_velocity
+
+        if(iDC.eq.1)     then
+	        t_1 =  FA_obs
+        	t_2 =  FA_st-depth_st/water_velocity            !!real
+         endif
+
+         if(iDC.eq.2)     then
+         	t_1 = FA_dc                             !!real
+         	!!t_2 = FA_obs-depth_shot/water_velocity        !!real
+         	t_2 = FA_st-(depth_shot+depth_st)/water_velocity        !!real
+         endif
+
+	FA_error=1+ceiling(abs(t_1-t_2)/dt)  !!integer
+
+!	if(rank.eq.0)   then
+!		write(123,*)"ishot,FA_error, FA_error(s): ",i,FA_error(ishot),abs(t_1-t_2)
+!		write(456,*)"ishot,DC,depth,depth,FA_st,t_1,t_2: ",i,DC,depth_st,depth_shot,FA_st,t_1,t_2
+!	endif
+
+
+! Loop trace by trace
+
+        do j=1,NumRec
+        	pos_r = pos_byte + (j-1)*(nh+nt)*4
+                READ(unit_read+ifile, pos=pos_r)  sudata(1:nt+nh,j)
+        enddo
+
+	do j=1,NumRec
+                do k=1,nt
+                        input(k,j)=sudata(k+nh,j)
+                enddo
+        enddo
+
+	k1=FA_error
+	do j=1,NumRec
+		do k=1,k1
+        	        shot(k,j)=input(1,j)
+        	enddo
+        	do k=k1,nt
+        	        shot(k,j)=input(k-k1+1,j)
+        	enddo
+	enddo
+
+	do j=1,NumRec
+        	pos_w = pos_byte + (j-1)*(nh+nt)*4
+        	WRITE(unit_write+ifile, pos=pos_w)  sudata(1:nh,j)	!! write header
+		WRITE(unit_write+ifile, pos=pos_w+nh*4) shot(1:nt,j)    !! real traces
+	enddo
+
+
+endif	!ishot
+enddo	!itimes
+
+deallocate(sudata)
+deallocate(input)
+deallocate(shot)
+
+END SUBROUTINE WRITE_CORR

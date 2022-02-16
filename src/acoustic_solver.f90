@@ -100,7 +100,7 @@ implicit none
 	nys=dny2+nySou
 	nxreco=dnx+nxx
 	nyreco=dny2+nyRec	
-		
+
 	nxt=nx+2*dnx
 	nyt=dny2+ny+dny
 

@@ -17,10 +17,10 @@ USE mod_PG_arrays
 
 implicit none
 include 'mpif.h'
+integer :: numtasks,rank,ierr,status(MPI_STATUS_SIZE)
 
 integer :: i,j,k,iDC
 integer :: nSources,nSS,nsamples
-integer :: numtasks,rank,ierr,status(MPI_STATUS_SIZE)
 integer :: ntimes,itimes,icount,i1,i2
 integer :: datum_i(nx),datum_f(nx)
 integer :: unit_file1,unit_file2,pos_byte,ifile,nSSS
@@ -132,16 +132,25 @@ call DC_propagation(iDC,nSSS,datum_i,datum_f,pos_grid,input,output)
 deallocate(pos_grid)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!    FILTERING OUTPUT	                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+if(filtering.ne.0)	then
+	if(rank.eq.0) write(*,*)'FILTERING RESULT BETWEEN ...', f1,' Hz AND ',f2,' Hz'
+	call BP_filter(nSSS,nt,dt,f1,f2,output)
+endif
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!    SAVING OUTPUT	                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 if(iDC.eq.1) then
         if(rank.eq.0)write(*,*)'SAVING SHOT GATHERS ...'
-	call WRITE_SG(iDC,icount,nSSS,unit_file2,output)
+	call WRITE_SG(iDC,icount,0,nSSS,unit_file2,output)
 endif
 
 if(iDC.eq.2) then
-        if(rank.eq.0)write(*,*)'SAVING POINT GATHERS ...'
+        if(rank.eq.0)write(*,*)'SAVING POINT GATHERS FINALES ...'
 	call WRITE_PG(iDC,icount,nSSS,unit_file2,output)
 endif
 
