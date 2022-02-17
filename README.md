@@ -15,7 +15,7 @@ As inputs:
 For more details on the physics implemented in the software, see the reference pre-print [1]. This reference is also revealing to know which type of streamer data is a good candidate for downward continuation, and also to understand the validity limits of the DC results.
 
 ## Installation
-Instructions on how to install and use this software are available in the PDF manual located in this directory and named: [Manual_DC.pdf](Manual_DC.pdf)
+Instructions on how to install and use this software are available in the PDF manual located in this directory and named: [UserGuide.pdf](UserGuide.pdf)
 
 ## Development
 - Development is hosted on GitHub repository:
@@ -26,4 +26,4 @@ Instructions on how to install and use this software are available in the PDF ma
 - This software was developed at Barcelona Center for Subsurface Imaging, at ICM-CSIC.
 
 ## Reference
-- Clara Estela Jimenez Tejero, Cesar R. Ranero, Valenti Sallares and Claudia Gras. 'Open source downward continuation and redatuming to the seafloor of streamer data', arXiv: https://arxiv.org/abs/2106.00646.
+- Clara Estela Jimenez Tejero, Cesar R. Ranero, Valenti Sallares and Claudia Gras. 'Open source downward continuation to the seafloor of streamer data', arXiv: https://arxiv.org/abs/2106.00646.
