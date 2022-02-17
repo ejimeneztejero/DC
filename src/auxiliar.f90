@@ -158,7 +158,7 @@ USE mod_PG_arrays
 implicit none
 
 integer :: unit_PG
-integer :: i,j,jrec,k,ishot,iDC,icount,k1
+integer :: i,j,jrec,k,ishot,iDC,icount,rank
 integer :: nSS,nh
 integer :: ifile_r,ifile_w
 
@@ -202,12 +202,11 @@ if(iDC.eq.2)	then
 do j=1,nSS
 
 	do k=1,nt
-                shot(k,j)=output(nt-k+k1,j) 
+                shot(k,j)=output(nt-k+1,j) 
         enddo
 
 enddo
 endif
-
 
 do j=1,nSS	!!specific shot
 
@@ -330,7 +329,7 @@ USE mod_SG_arrays
 
 implicit none
 
-integer :: i,j,k,nh,it,iDC,icount,k1
+integer :: i,j,k,nh,it,iDC,icount
 integer :: ifile,unit_DC
 INTEGER :: jrec,kdc,nSS
 INTEGER :: correction
@@ -361,7 +360,7 @@ enddo
 do j=1,nSS
 
 	do k=1,nt
-		shot(k,j)=SG(nt-k+k1,j)
+		shot(k,j)=SG(nt-k+1,j)
 	enddo
 
 enddo
