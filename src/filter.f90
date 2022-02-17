@@ -40,9 +40,16 @@ implicit none
 	real :: f0, Q, fc, fs, f1, f2, G0, f, fe
 	real :: S(ts,Num),yf(ts),Stmp(ts)
 	complex, parameter :: imag=(0.,1.)
-	complex, allocatable :: wsave(:), work(:) 
-	complex, allocatable :: H(:), Y(:) 
-	complex, allocatable :: Sc(:)
+!	complex, allocatable :: wsave(:) 
+!	complex, allocatable :: work(:) 
+!	complex, allocatable :: H(:), Y(:) 
+!	complex, allocatable :: Sc(:)
+
+
+	real, allocatable :: wsave(:) 
+	real, allocatable :: work(:) 
+	real, allocatable :: H(:), Y(:) 
+	real, allocatable :: Sc(:)
 
 	allocate(H(1:ts))
 

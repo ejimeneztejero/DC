@@ -135,10 +135,10 @@ deallocate(pos_grid)
 !!!!!!!!!!!!    FILTERING OUTPUT	                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-if(filtering.ne.0)	then
-	if(rank.eq.0) write(*,*)'FILTERING RESULT BETWEEN ...', f1,' Hz AND ',f2,' Hz'
-	call BP_filter(nSSS,nt,dt,f1,f2,output)
-endif
+!!if(filtering.ne.0)	then
+!!	if(rank.eq.0) write(*,*)'FILTERING RESULT BETWEEN ...', f1,' Hz AND ',f2,' Hz'
+!!	call BP_filter(nSSS,nt,dt,f1,f2,output)
+!!endif
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!    SAVING OUTPUT	                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
