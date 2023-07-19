@@ -30,4 +30,4 @@ Instructions on how to install and use this software are available in the PDF ma
 
 ## Reference
 
-- Clara Estela Jimenez Tejero, Cesar R. Ranero, Valenti Sallares and Claudia Gras. 'Open source downward continuation to the seafloor of streamer data', arXiv: https://arxiv.org/abs/2106.00646.
+Clara Estela Jimenez-Tejero et al, Downward continuation of marine seismic reflection data: an undervalued tool to improve velocity models, Geophysical Journal International, Volume 230, Issue 2, August 2022, Pages 831–848, https://doi.org/10.1093/gji/ggac087
