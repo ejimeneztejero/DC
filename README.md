@@ -13,7 +13,7 @@ To use the software, you need the following inputs:
 - Bathymetry data for each shot gather in an ASCII file.
 - An input file containing various parameters that are read during execution.
 - By default, the software assumes a constant p-wave velocity model for the water column. However, you can also provide XBT data to create a specific Vp model.
-- For a more detailed understanding of the underlying physics and to determine the suitability and limitations of DC results for different streamer data, refer to the reference [1]
+- For a more detailed understanding of the underlying physics and to determine the suitability and limitations of DC results for different streamer data, refer to the reference [1].
 
 
 ## Installation
