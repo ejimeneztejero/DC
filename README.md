@@ -32,4 +32,4 @@ To use the software, you need the following inputs:
 
 ## Reference
 
-Clara Estela Jimenez-Tejero et al, Downward continuation of marine seismic reflection data: an undervalued tool to improve velocity models, Geophysical Journal International, Volume 230, Issue 2, August 2022, Pages 831–848, https://doi.org/10.1093/gji/ggac087
+[1] Clara Estela Jimenez-Tejero et al, Downward continuation of marine seismic reflection data: an undervalued tool to improve velocity models, Geophysical Journal International, Volume 230, Issue 2, August 2022, Pages 831–848, https://doi.org/10.1093/gji/ggac087
