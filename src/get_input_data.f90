@@ -6,21 +6,16 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine inputs()
+subroutine inputs(iOBS,rank,numtasks)
 
 USE mod_parfile
-USE mod_input_arrays
-USE mod_SG_arrays
+USE mod_model_arrays
+USE mod_data_arrays
 
 implicit none
-include 'mpif.h'
 
-
-        integer :: numtasks,rank,ierr,errcode,status(MPI_STATUS_SIZE)
-
-        integer :: i,ifile
+        integer :: i,iOBS,rank,numtasks
         integer :: NumBat,nmodel
-
         integer :: shotID_first_su,shotID_last_su	
         integer :: shotID_first_nav,shotID_last_nav     
 
@@ -32,67 +27,65 @@ include 'mpif.h'
 
         logical :: file_exists
 
-        call MPI_COMM_SIZE(MPI_COMM_WORLD,numtasks,ierr)
-        call MPI_COMM_RANK(MPI_COMM_WORLD,rank,ierr)
-        ierr=0
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!     Lectura de parametros Par_file
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+call read_OBSfile(iOBS,rank)
 
-        if(rank.eq.0)write(*,*)'*********************'
-        if(rank.eq.0)write(*,*)'READ INPUT PARAMETERS'
-        if(rank.eq.0)write(*,*)'*********************'
-
-        call read_parfile(rank)
-
-        call allocate_SG_arrays()
-
-        call open_su_files()
+call open_su_files(iOBS)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!	SHOTGATHERS NAVIGATION
 
-        call get_navigation_file(rank,shotID_first_nav,shotID_last_nav)
-        call get_su_files1(rank,shotID_first_su,shotID_last_su)
+if(rank.eq.0)	then
+        write(*,*)
+        write(*,*)'*********************'
+        write(*,*)'READING NAVIGATION'
+        write(*,*)'*********************'
+
+endif
+
+call get_navigation_file(iOBS,shotID_first_nav,shotID_last_nav)	!fuera del loop
+
+if(rank.eq.0)	then
+        write(*,*)
+        write(*,*)'*********************'
+        write(*,*)'READING FIELD DATA'
+        write(*,*)'*********************'
+endif
+
+call get_su_files1(iOBS,shotID_first_su,shotID_last_su)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!     Warnings
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        if(shotID_first_su.ne.shotID_first_nav.or.shotID_last_su.ne.shotID_last_nav)    then
-                if(rank.eq.0)write(*,*)'ERROR: first/last shotID in .su and navigation file must coincide'
-                if(rank.eq.0)call ascii_art(2)
-                call MPI_barrier(MPI_COMM_WORLD,ierr)
-                call MPI_Abort(MPI_COMM_WORLD, errcode, ierr)
-                stop
-        endif
+if(shotID_first_su.ne.shotID_first_nav.or.shotID_last_su.ne.shotID_last_nav)    then
+	write(*,*)'ERROR: first/last shotID in .su and navigation file must coincide'
+        call ascii_art(2)
+        stop
+endif
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        do ifile=1,split_parts
-                ifile_su((shotID_1(ifile)-shot_init+1):(shotID_n(ifile)-shot_init+1))=ifile
-        enddo
-
-	call get_su_files2(rank)
+call get_su_files2(iOBS)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!     Lectura de geometria_ shots, traces, dimensiones modelo
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        if(rank.eq.0)write(*,*)
-        if(rank.eq.0)write(*,*)'********************************************'
-        if(rank.eq.0)write(*,*)'GET GEOMETRY: POSITION of SHOTS AND CNANNELS'
-        if(rank.eq.0)write(*,*)'********************************************'
+if(rank.eq.0)	then
+        write(*,*)
+        write(*,*)'********************************************'
+        write(*,*)'GETTING GEOMETRY: POSITION of SHOTS'
+        write(*,*)'********************************************'
+endif
 
-        call get_geometry(rank,NumBat,length_model,nmodel,add1)
+call get_geometry(NumBat,length_model,nmodel,add1)	!!fuera del loop
 
-        do i=1,NumShots
+do i=1,NumShots
 
-                if(shotID_su(i).ne.shotID_nav(i))   then
-                        if(rank.eq.0)write(*,*)'ERROR: shotID must be coincident in su and nav file'
-                        if(rank.eq.0)call ascii_art(2)
-                        call MPI_barrier(MPI_COMM_WORLD,ierr)
-                        call MPI_Abort(MPI_COMM_WORLD, errcode, ierr)
+	if(shotID_su(i).ne.shotID_nav(i))   then
+                        write(*,*)'ERROR: shotID must be coincident in su and nav file'
+                        call ascii_art(2)
                         stop
                 endif
         enddo
@@ -103,45 +96,44 @@ include 'mpif.h'
 !!!     Lectura e interpolacion de batimetria
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        if(rank.eq.0)write(*,*)
-        if(rank.eq.0)write(*,*)'****************************'
-        if(rank.eq.0)write(*,*)'CALCULATING BATHYMETRY MODEL'
-        if(rank.eq.0)write(*,*)'****************************'
+	if(rank.eq.0)	then
+
+        write(*,*)
+        write(*,*)'****************************'
+        write(*,*)'CALCULATING BATHYMETRY MODEL'
+        write(*,*)'****************************'
+
+	endif
 
         nx=nmodel
 
         allocate(bat_model_grid(nx))
         bat_model_grid=0;
 
-	call allocate_input_arrays(1)
+	call allocate_model_arrays(1)
 
-        call get_bathymetry_model(rank,NumBat,length_model,nmodel,bat_model_grid)
+        call get_bathymetry_model(NumBat,length_model,nmodel,bat_model_grid)	!!fuera del loop
 
-        datum1_shot=1+ceiling(shot_depth/dmodel)        !! superficie 1 shots
-        datum1_rec=1+ceiling(streamer_depth/dmodel)     !! superficie 1 receivers
+        datum1=1+ceiling(shot_depth/dmodel)        	!! superficie 1 shots
         datum2=bat_model_grid                         	!! superficie 2
 
         ny=maxval(datum2)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!     Superficies datum1 y datum2
+!!!     Superficies datum
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-	call allocate_input_arrays(2)
+	call allocate_model_arrays(2)
 
         DC_model=water_velocity
 
-        if(rank.eq.0)   then
-
-                write(*,*)'Full line model dimensions (points): ',&
-                nx,' length, ',ny,' depth'
-                write(*,*)'In km: ',&
-                (nx-1)*dmodel/1000.,' length, ',&
-                (ny-1)*dmodel/1000.,' depth'
-
-        endif
-
-	NumMax_PG=nx
+	if(rank.eq.0)	then
+	        write(*,*)'Full line model dimensions (points): ',&
+	        nx,' length, ',ny,' depth'
+	        write(*,*)'In km: ',&
+	        (nx-1)*dmodel/1000.,' length, ',&
+       		(ny-1)*dmodel/1000.,' depth'
+	endif
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!------Lectura de modelo Vp agua, constante o interpolando XBT
@@ -152,11 +144,15 @@ include 'mpif.h'
 
         if(file_exists) then
 
-                if(rank.eq.0)write(*,*)
-                if(rank.eq.0)write(*,*)'Building Vp model for water column ...'
-                if(rank.eq.0)write(*,*)
+		if(rank.eq.0)	then
 
-                call get_Vp_model(rank,add1)
+	                write(*,*)
+        	        write(*,*)'Building Vp model for water column ...'
+                	write(*,*)
+
+		endif
+
+                call get_Vp_model(add1)
 
         endif
 
@@ -164,15 +160,14 @@ include 'mpif.h'
 
 end subroutine inputs
 
-
-subroutine get_bathymetry_model(rank,NumBat,length_model,nmodel,bat_model_grid)
+subroutine get_bathymetry_model(NumBat,length_model,nmodel,bat_model_grid)
 
 USE mod_parfile
-USE mod_SG_arrays
+USE mod_data_arrays
 
 implicit none
 
-	integer :: i,j,ERR,rank
+	integer :: i,j,ERR
 	integer :: nmodel,NumBat
 	real :: length_model
 
@@ -214,11 +209,8 @@ implicit none
 	call INTRPL(NumBat+2,xmodel_,xbat_,nmodel,xmodel,bat_model,ERR)
 
 	do j=1,nmodel
-!		bat_model_grid(j)=1+nint(bat_model(j)/dmodel)
 		bat_model_grid(j)=1+ceiling(bat_model(j)/dmodel)
 	enddo
-
-	if(rank.eq.0)	then
 
 	file_name=trim(adjustl(folder_output))//'bathymetry_meters.txt'
 	open(unit=12,file=file_name,status='unknown')
@@ -227,29 +219,29 @@ implicit none
 	enddo
 	close(12)
 
-	endif
-
 	deallocate(bat_model,xmodel)
 	deallocate(xmodel_,xbat_)
 	deallocate(bat_model_shot,bat_pos_shot)
 
 end subroutine get_bathymetry_model
 
-subroutine get_geometry(rank,NumBat,length_model,nmodel,add1)
+subroutine get_geometry(NumBat,length_model,nmodel,add1)
 
 USE mod_parfile
-USE mod_SG_arrays
+USE mod_data_arrays
 
 implicit none
 
-        integer :: rank,j,k,ii,ishot
+        integer :: j,k,ii,ishot
 	integer :: iline,itr,NumBat,ERR,nlines
         integer :: shotID,nmodel
 
         real :: xs,ys,bat,x1,y1,twt,add1
-        real :: length_model,length_streamer,NearOffset
+        real :: length_model
 
-        character (len=500) :: file_name,file_name2
+        character (len=500) :: file_name
+
+!!	LECTURA DATOS SHOTGATHERS
 
         file_name= trim(adjustl(folder_input)) // trim(adjustl(nav_file))
         open(unit=10,file=file_name,status='old')
@@ -259,13 +251,14 @@ implicit none
 		nlines = nlines+1
 	enddo
 	20 close(10)
+
         open(unit=10,file=file_name,status='old')
 
         NumBat=0
 
         do ishot=1,nlines !!number of lines nav_file
 
-		shotID=0;xs=0;ys=0;twt=0;bat=0;NearOffset=0;
+		shotID=0;xs=0;ys=0;twt=0;bat=0;
 
 !!!		POSITION (UTM) OF SHOT GATHERS, AND BAT 
 
@@ -303,29 +296,13 @@ implicit none
 
 		endif
 
-!!!		POSITION NEAR OFFSET AND OFFSETS 
-
-		if(offset_header.eq.1)	then
-
-			near_offset=abs(offset_su(1,ii))
-			length_streamer=abs(offset_su(1,ii)-offset_su(NumRec,ii))
-
-		else if(offset_header.eq.0)	then
-
-		        length_streamer=(NumRec-1)*drec !! metros
-
-		endif
-
-		NearOffset=abs(near_offset)
-		add1=NearOffset+length_streamer+added_space_model_X !! metros, distancia a (x1,y1)
+		add1=added_space_model_X
 
                 if(ii.eq.1)  then
                         x1=xs;y1=ys
                 endif
 
                 pos_shot(ii) = add1+sqrt((xs-x1)**2.+(ys-y1)**2.) !! distancia entre cada shot y el primero
-
-!                pos_shot_grid(ii)=1+nint(pos_shot(ii)/dmodel)
                 pos_shot_grid(ii)=1+ceiling(pos_shot(ii)/dmodel)
 
                 if(bat.ne.bat.or.bat.eq.0)      then    !localiza NaN y CEROS
@@ -336,57 +313,42 @@ implicit none
                         NumBat=NumBat+1
                 endif
 
-!!              POSICION TRAZAS PARA CADA SHOT
-		if(offset_header.eq.0)	then
-
-                        do itr=1,NumRec
-                                pos_trace(itr,ii)=pos_shot(ii)-NearOffset-(itr-1)*drec
-                        enddo
-
-		endif
-
-		if(offset_header.eq.1)	then
-
-	                do itr=1,NumRec
-				pos_trace(itr,ii)=pos_shot(ii)-abs(offset_su(itr,ii))
-                        enddo
-
-		endif
-
-                do itr=1,NumRec
-!                        pos_trace_grid(itr,ii)=1+nint(pos_trace(itr,ii)/dmodel)
-                        pos_trace_grid(itr,ii)=1+ceiling(pos_trace(itr,ii)/dmodel)
-                enddo
-
         enddo
 
-	length_model=pos_shot(NumShots)+added_space_model_X	!!metros
+        file_name=trim(adjustl(folder_output))//'shots_position.txt'
+        open(unit=12,file=file_name,status='unknown')
+        do j=1,NumShots
+                write(12,*)j,pos_shot(j),-shot_depth
+        enddo
+        close(12)
 
-!        nmodel=1+nint(length_model/dmodel)	!!puntos
-        nmodel=1+ceiling(length_model/dmodel)	!!puntos
+	length_model=pos_shot(NumShots)+add1
+
+        nmodel=1+ceiling(length_model/dmodel)
 
 	CLOSE(10)
 
 end subroutine get_geometry
 
-subroutine get_navigation_file(rank,shotID_first_nav,shotID_last_nav)
+subroutine get_navigation_file(iOBS,ID_first_nav,ID_last_nav)
 
 USE mod_parfile
-USE mod_SG_arrays
+USE mod_data_arrays
 
 implicit none
 
-	integer :: i,rank,nlines,shot_id
-	integer :: shotID_first_nav,shotID_last_nav
+	integer :: i,nlines,num_id,iOBS,rank
+	integer :: ID_first_nav,ID_last_nav
 
 	CHARACTER(len=50) :: access,form,Str
-	CHARACTER(len=500) :: file_name,file_name2
+	CHARACTER(len=500) :: file_name
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!	NAVIGATION FILE
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	file_name= trim(adjustl(folder_input)) // trim(adjustl(nav_file))
+
 	open(unit=10,file=file_name,status='old')
 	nlines=0
 	do
@@ -395,55 +357,38 @@ implicit none
 	enddo 
 	10 close (10) 
 
-	file_name= trim(adjustl(folder_input)) // trim(adjustl(nav_file))
 	open(unit=10,file=file_name,status='old')
 	do i=1,nlines
-		read(10,*)shot_id
-		if(i.eq.1)shotID_first_nav=shot_id
-		if(i.eq.nlines)shotID_last_nav=shot_id
+		read(10,*)num_id
+		if(i.eq.1)ID_first_nav=num_id
+		if(i.eq.nlines)ID_last_nav=num_id
 	enddo
-
 	close(10)
 
-	if(rank.eq.0)	then
+	write(*,*)'Navigation file contains shots from ',ID_first_nav,' to ',ID_last_nav	
+	write(*,*)'NumShots total:', ID_last_nav-ID_first_nav+1,', Num Lines Nav_file:',nlines!
 
-		write(*,*)
-                write(*,*)'***************************************************'
-                write(*,*)'READING NAVIGATION FILE: ',trim(adjustl(nav_file))
-                write(*,*)'***************************************************'
-
-		write(*,*)'Navigation file contains shots from ',&
-		shotID_first_nav,' to ',shotID_last_nav	
-		write(*,*)'NumShots total:', shotID_last_nav-shotID_first_nav+1,', Num Lines Nav_file:',nlines!
-		if(nlines.ne.shotID_last_nav-shotID_first_nav+1)	then
-			write(*,*)'WARNING: navigation for ',abs(nlines-(shotID_last_nav-shotID_first_nav+1)),' shots are missing in nav_file'
-		endif
-
+	if(nlines.ne.ID_last_nav-ID_first_nav+1)	then
+		write(*,*)'WARNING: navigation for ',abs(nlines-(ID_last_nav-ID_first_nav+1)),' shots are missing in nav_file'
 	endif
-	
+
 end subroutine get_navigation_file
 
-subroutine get_su_files1(rank,shotID_first_su,shotID_last_su)
+subroutine get_su_files1(iOBS,shotID_first_su,shotID_last_su)
 
 USE mod_parfile
-USE mod_SG_arrays
+USE mod_data_arrays
 
 implicit none
 
-	INTEGER :: i,j,k,rank
+	INTEGER :: i,j,k,iOBS
 	INTEGER :: shotID_first_su,shotID_last_su
-	INTEGER :: nh,ifile
+	INTEGER :: nh
 
 	INTEGER(4) :: pos_read
 
-	CHARACTER(len=50) :: Str,num_split
+	CHARACTER(len=50) :: Str
 	CHARACTER(len=500) :: file_name
-
-if(rank.eq.0)write(*,*)
-if(rank.eq.0)write(*,*)'**************************************************************************'
-if(rank.eq.0)write(*,*)'READING SU PARTITION FILES'
-if(rank.eq.0)write(*,*)'**************************************************************************'
-
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!	.SU FILE
@@ -451,46 +396,32 @@ if(rank.eq.0)write(*,*)'********************************************************
 
 !!! TO READ ShotID:
 
-pos_read=9 	!! fldr
-
-nh = 60	! Size su header = 60*4 bytes
+pos_read=byte_shotnumber
+nh = size_su_header	!Size su header = 60*4 bytes
 
 ! READ SU FILES
+!file_name = original_file
+file_name = trim(adjustl(folder_input)) // original_file(iOBS)
 
-do ifile=1,split_parts
+READ(unit0+iOBS,pos=pos_read) shotID_1
+READ(unit0+iOBS,pos=sizeof-(nh+nt)*4+pos_read) shotID_n
 
+write(*,*)trim(adjustl(file_name)),&
+', contains shots from ',shotID_1,' to ',shotID_n
 
-        call fun_num_split(split_parts,ifile,num_split)
-
-        file_name = trim(adjustl(su_file0)) // trim(adjustl(num_split))
-        file_name = trim(adjustl(folder_input)) // trim(adjustl(file_name))
-
-	READ(unit0+ifile,pos=pos_read) shotID_1(ifile)
-	READ(unit0+ifile,pos=sizeof(ifile)-(nh+nt)*NumRec*4+pos_read) shotID_n(ifile)
-	if(rank.eq.0)	then
-		write(*,*)trim(adjustl(file_name)),&
-		', contains shots from ',shotID_1(ifile),' to ',shotID_n(ifile)
-	endif
-
-	if(ifile.eq.1)READ(unit0+ifile,pos=pos_read) shotID_first_su
-	if(ifile.eq.split_parts)READ(unit0+ifile,pos=sizeof(ifile)-(nh+nt)*NumRec*4+pos_read) shotID_last_su
-
-enddo
-
-if(rank.eq.0)write(*,*)'TOTAL: SU files contain shots from ',shotID_first_su,' to ',shotID_last_su
+READ(unit0+iOBS,pos=pos_read) shotID_first_su
+READ(unit0+iOBS,pos=sizeof-(nh+nt)*4+pos_read) shotID_last_su
 
 end subroutine get_su_files1
 
-subroutine get_su_files2(rank)
+subroutine get_su_files2(iOBS)
 
 USE mod_parfile
-USE mod_SG_arrays
+USE mod_data_arrays
 
 implicit none
-include 'mpif.h'
 
-	integer :: numtasks,rank,ierr,errcode,status(MPI_STATUS_SIZE)
-	integer :: i,j,k,icount,ifile
+	integer :: i,j,k,icount,iOBS
 	INTEGER :: nh
 
 	INTEGER*2 :: pos_scalco,scalco
@@ -498,79 +429,66 @@ include 'mpif.h'
 	INTEGER*4 :: shotID,pos_read
 	INTEGER*4 :: pos_byte,pos_byte2 
 
-	INTEGER*4 :: pos_offset,pos_sx,pos_sy
-	INTEGER*4 :: sx,sy,offset
+	INTEGER*4 :: pos_sx,pos_sy
+	INTEGER*4 :: sx,sy
 
-        CHARACTER(len=50) :: num_split
 	CHARACTER(len=500) :: file_name
-
-	call MPI_COMM_SIZE(MPI_COMM_WORLD,numtasks,ierr)
-	call MPI_COMM_RANK(MPI_COMM_WORLD,rank,ierr)
-
-	ierr=0;
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!	.SU FILE
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !!! TO READ ShotID:
-nh = 60	! Size su header = 60*4 bytes
 
-pos_read=9 ! fldr OK
-
-pos_sx = 73
-pos_sy = 77
-pos_scalco= 71
-
-pos_offset = 37
+nh = size_su_header     !Size su header = 60*4 bytes
+pos_read=byte_shotnumber
+pos_scalco= byte_scalco
+pos_sx = byte_sx
+pos_sy = byte_sy
 
 !------------------------------------------------------------------------
 ! Loop shot-by-shot
 
 pos_byte=1
 icount=1
-ifile=1
 
-call fun_num_split(split_parts,ifile,num_split)
-
-file_name = trim(adjustl(su_file0)) // trim(adjustl(num_split))
-file_name = trim(adjustl(folder_input)) // trim(adjustl(file_name))
-
-READ(unit0+ifile,pos=pos_byte+pos_read-1) shotID
+READ(unit0+iOBS,pos=pos_read) shotID
 
 if(sx_sy_header.eq.1)	then
-	READ(unit0+ifile,pos=pos_byte+pos_sx-1) sx
-	READ(unit0+ifile,pos=pos_byte+pos_sy-1) sy
-	READ(unit0+ifile,pos=pos_byte+pos_scalco-1) scalco
+
+	READ(unit0+iOBS,pos=pos_byte+pos_sx-1) sx
+	READ(unit0+iOBS,pos=pos_byte+pos_sy-1) sy
+	READ(unit0+iOBS,pos=pos_byte+pos_scalco-1) scalco
+
 endif
 
-do while(shotID.ge.shot_init.and.shotID.le.shot_fin)
+do while(shotID.ge.shot_init.and.shotID.le.shot_fin.and.icount.le.NumShots)
 
-	shotID_su(icount)=shotID
-	pos_byte_su(icount)=pos_byte 
+	shotID_su(icount)=shotID	
+	pos_byte_su(icount)=pos_byte
 
 	if(sx_sy_header.eq.1)	then
 
         	if(sx.eq.0)   then
-                	if(rank.eq.0)write(*,*)'ERROR: sx in header is 0. &
+
+                	write(*,*)'ERROR: sx in header is 0. &
                         set sx_sy_header: 0 in file: ',trim(adjustl(par_file)),&
                         ' or include geometry in .sgy file'
-                	if(rank.eq.0)call ascii_art(2)
+                	call ascii_art(2)
 
-		        call MPI_barrier(MPI_COMM_WORLD,ierr)
-        		call MPI_Abort(MPI_COMM_WORLD, errcode, ierr)
 			stop
+
         	endif
 
         	if(sy.eq.0)   then
-                	if(rank.eq.0)write(*,*)'ERROR: sy in header is 0. &
+
+                	write(*,*)'ERROR: sy in header is 0. &
                         set sx_sy_header: 0 in file: ',trim(adjustl(par_file)),&
                         ' or include geometry in .sgy file'
-                	if(rank.eq.0)call ascii_art(2)
+                	call ascii_art(2)
 
-		        call MPI_barrier(MPI_COMM_WORLD,ierr)
-        		call MPI_Abort(MPI_COMM_WORLD, errcode, ierr)
 			stop
+
         	endif
 
 		sx_su(icount)=abs(sx)
@@ -588,96 +506,45 @@ do while(shotID.ge.shot_init.and.shotID.le.shot_fin)
 
 	endif
 
-!	Loop trace by trace
-	do j=1,NumRec
+	pos_byte=pos_byte+(nh+nt)*4	
 
-		pos_byte2=pos_byte + (j-1)*(nh+nt)*4
+        if(pos_byte.ge.sizeof) then
 
-		if(offset_header.eq.1)	then
-
-			READ(unit0+ifile,pos=pos_byte2+pos_offset-1) offset
-
-			if(offset.eq.0)	then
-				if(rank.eq.0)write(*,*)'ERROR: offset in header is 0. &
-				set offset_header: 0 in file: ',trim(adjustl(par_file)),&
-				' or include geometry in .sgy file'
-				if(rank.eq.0)call ascii_art(2)
-
-			        call MPI_barrier(MPI_COMM_WORLD,ierr)
-       				call MPI_Abort(MPI_COMM_WORLD, errcode, ierr)
-				stop
-			endif
-
-			if(offset_unit.gt.0) offset_su(j,icount)=abs(offset)*offset_unit
-			if(offset_unit.lt.0) offset_su(j,icount)=abs(offset)/abs(offset_unit)		
-
-		endif
-
-		if(pos_byte2.gt.sizeof(ifile)) then	
-			if(rank.eq.0)write(*,*)'ERROR: .su file finished in the middle of a Shot'
-			if(rank.eq.0)call ascii_art(2)
-
-		        call MPI_barrier(MPI_COMM_WORLD,ierr)
-		        call MPI_Abort(MPI_COMM_WORLD, errcode, ierr)
-			stop
-		endif
-
-	enddo
-
-	pos_byte=pos_byte+NumRec*(nh+nt)*4	
-
-	if(pos_byte.gt.sizeof(ifile)) then
-		
-		if(rank.eq.0)write(*,*)'Finished reading: ',trim(adjustl(file_name))
-
-		if(ifile+1.gt.split_parts)	then
-			if(rank.eq.0)write(*,*)'No more .su files to read'
-			exit
-		endif
-
-		if(ifile+1.le.split_parts)	then
-			ifile=ifile+1
-			pos_byte = 1
-		endif
+		exit
 
 	endif
 
-        call fun_num_split(split_parts,ifile,num_split)
+	if(pos_byte.gt.0.and.pos_byte.lt.sizeof)	then
 
-        file_name = trim(adjustl(su_file0)) // trim(adjustl(num_split))
-        file_name = trim(adjustl(folder_input)) // trim(adjustl(file_name))
+		READ(unit0+iOBS,pos=pos_byte+pos_read-1) shotID
+		if(sx_sy_header.eq.1)	then
+			READ(unit0+iOBS,pos=pos_byte+pos_sx-1) sx
+			READ(unit0+iOBS,pos=pos_byte+pos_sy-1) sy
+			READ(unit0+iOBS,pos=pos_byte+pos_scalco-1) scalco
+		endif
 
-	READ(unit0+ifile,pos=pos_byte+pos_read-1) shotID
+		icount=shotID-shot_init+1
 
-	if(sx_sy_header.eq.1)	then
-		READ(unit0+ifile,pos=pos_byte+pos_sx-1) sx
-		READ(unit0+ifile,pos=pos_byte+pos_sy-1) sy
-		READ(unit0+ifile,pos=pos_byte+pos_scalco-1) scalco
 	endif
-
-	icount=shotID-shot_init+1
 
 enddo
 
-if(rank.eq.0)	then
-	do k=1,NumShots
-		if(shotID_su(k).eq.0)	then
-			write(*,*)'WARNING, not recorded in .su file, shotID: ',k+shot_init-1
-		endif
-	enddo
-endif
+do k=1,NumShots
+	if(shotID_su(k).eq.0)	then
+		write(*,*)'WARNING, not recorded in .su file, shotID: ',k+shot_init-1
+	endif
+enddo
 
 end subroutine get_su_files2
 
-subroutine get_Vp_model(rank,add1)
+subroutine get_Vp_model(add1)
 
 USE mod_parfile
-USE mod_SG_arrays
-USE mod_input_arrays
+USE mod_model_arrays
+USE mod_data_arrays
 
 implicit none
 
-	integer :: rank
 	integer :: ddx,i,j,topo(nx),nlines,ERR,imax
 	integer :: maxlines,shotline,maxl
 	integer :: nxx,nyy,addx
@@ -831,9 +698,6 @@ implicit none
 			write(*,*)'x2=0,line nav_file:',i
 		endif
 
-!!		if(rank.eq.0)write(111,*)'i,pos(i)',nxx,i,x2(i)
-!!		write(*,*)nxx,i,x2(i)
-
 	enddo
 
 !	npos= 1+nint( (pos_shot(NumShots)-pos_shot(1))/dmodel )
@@ -842,10 +706,8 @@ implicit none
 
 	do i=1,npos
 		xpos(i)=pos_shot(1)+(i-1)*dmodel
-!!		if(rank.eq.0)write(222,*)i,xpos(i),pos_shot(1),pos_shot(NumShots)
 	enddo
 
-!!	if(rank.eq.0)write(*,*)'nxx,x2(nxx),xpos(npos)',nxx,x2(nxx),xpos(npos)
 
 	if(xpos(npos).gt.x2(nxx))	then
 		xpos(npos)=x2(nxx)
@@ -874,17 +736,11 @@ implicit none
 		enddo
 	enddo
 
-	if(rank.eq.0)   then
-
 		do i=1,nx
 			do j=1,ny
 				if(DC_model(j,i).eq.0)write(*,*)'WARNING Vp model is wrong'
 			enddo
 		enddo
-
-	endif
-
-	if(rank.eq.0)   then
 
 	        file_name=trim(adjustl(folder_output))//'Vp_water_model.txt'
 		open(unit=12,file=file_name,status='unknown') 	
@@ -892,9 +748,6 @@ implicit none
 			write(12,'(20000(e12.5,2x))') (DC_model(j,i),i=1,nx)
 		enddo
 		close(12)
-
-	endif
-
 
 	deallocate(vpm,vpm2,vpm3,vpm4)
 	deallocate(z,xpos,x2,y2)

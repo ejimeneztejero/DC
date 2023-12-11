@@ -6,24 +6,24 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine solver(iDC,nSS,nxx,nySou,nyRec,S,ny,nx,ctmp,shot_synth)
+subroutine solver(nSS,nxx,nySou,nyRec,S,ny,nx,ctmp,dt,nt,dmodel,shot_synth)
 
-USE mod_parfile, only: dt,nt,dmodel
+!USE mod_parfile, only: dt,nt,dmodel
 
 implicit none
 
 	!! Forward propagation
 
 	!!!! Simulation Geometry
-	integer i,ny,nx,j,k,dn,ix
-	integer k1,k2,iDC,nSS
+	integer i,ny,nx,j,k,dn,ix,nt
+	integer k1,k2,nSS
 	integer l,m,acc
 	integer dPML,dny,dnx,dny2,nxt,nyt
 	integer nxx(nSS),nySou(nSS),nyRec(nSS)
 	integer nxreco(nSS),nyreco(nSS)
 
 	!!!! Simulation parameters
-	real ctmp(ny,nx)
+	real ctmp(ny,nx),dmodel,dt
 	real S(nt,nSS),shot_synth(nt,nSS)
 	integer, allocatable :: nxs(:),nys(:)
 	real, allocatable :: coef1(:),coef2(:)
