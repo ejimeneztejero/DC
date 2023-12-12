@@ -1,6 +1,6 @@
 #!/bin/bash
 FC	= mpif90
-FFLAGS  = -I include -O3
+FFLAGS  = -O3
 LFLAGS  = $(FFLAGS)
 EXE	= DC_MCS_run
 SRC     = modules.f90 \
