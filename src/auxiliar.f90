@@ -182,7 +182,7 @@ do j=1,nSS	!!specific shot
 	ifile_r=ifile_su(ishot)
 	pos_r = pos_byte_su(ishot) + (jrec-1)*(nt+nh)*4
 	
-	READ(unit0+ifile_r, pos=pos_r)  sudata(1:nh,j)		!! read one trace from DC0
+	READ(unit_DC0+ifile_r, pos=pos_r)  sudata(1:nh,j)		!! read one trace from DC0
 
 enddo
 
@@ -223,6 +223,106 @@ deallocate(shot)
 END SUBROUTINE WRITE_PG
 
 
+subroutine write_SG0()
+
+USE mod_parfile
+USE mod_SG_arrays
+
+implicit none
+include 'mpif.h'
+
+integer :: numtasks,rank,ierr,status(MPI_STATUS_SIZE)
+
+integer :: nsamples,ntimes,itimes
+integer :: i,j,k,nh,icount
+integer :: ifile,jrec,fldr
+INTEGER(4) :: pos_byte,pos_read
+
+REAL(4), ALLOCATABLE :: sudata(:),sudata2(:,:)
+
+call MPI_COMM_SIZE(MPI_COMM_WORLD,numtasks,ierr)
+call MPI_COMM_RANK(MPI_COMM_WORLD,rank,ierr)
+ierr=0;
+
+nh=size_su_header
+pos_read=byte_shotnumber
+
+! Memory allocation
+ALLOCATE(sudata(nh+nt))
+sudata=0.;
+ALLOCATE(sudata2(nh+nt,NumRec))
+sudata2=0.;
+
+nsamples=NumShots
+
+ntimes=nsamples
+if(numtasks.gt.1)	then
+
+        if(nsamples.gt.numtasks)        then
+                ntimes=ceiling(1.*nsamples/numtasks)
+        endif
+
+	if(nsamples.le.numtasks)        then
+                ntimes=1
+        endif
+
+endif
+
+if(numtasks.eq.1.and.nsamples.gt.1) write(*,*)'NO PARALELIZATION, are you sure?'
+
+do itimes=1,ntimes
+
+icount=(itimes-1)*numtasks+rank+1        !!aqu       sucede la paralelizaci	 n
+
+if(shotID_(icount).ne.0.and.icount.le.nsamples)     then
+
+        ifile=ifile_su(icount)
+
+        if(reverse_streamer.eq.0)	then
+
+                do j=1,NumRec
+
+                        pos_byte = pos_byte_su(icount) + (j-1)*(nh+nt)*4
+
+                        READ(unit0+ifile, pos=pos_byte)  sudata(1:nh+nt)
+                        WRITE(unit_DC0+ifile, pos=pos_byte)  sudata(1:nh+nt)
+
+                enddo
+
+
+        endif
+
+        if(reverse_streamer.ne.0)	then
+
+                do j=1,NumRec
+
+                        pos_byte = pos_byte_su(icount) + (j-1)*(nh+nt)*4
+                        READ(unit0+ifile, pos=pos_byte)  sudata2(1:nh+nt,j)
+
+                enddo
+
+                do j=1,NumRec
+
+                        pos_byte = pos_byte_su(icount) + (j-1)*(nh+nt)*4
+                        jrec=NumRec-j+1
+                        WRITE(unit_DC0+ifile, pos=pos_byte)  sudata2(1:nh+nt,jrec)	!! write header
+
+                enddo
+
+        endif
+
+endif
+
+enddo
+
+
+deallocate(sudata)
+deallocate(sudata2)
+
+
+END SUBROUTINE write_SG0
+
+
 subroutine WRITE_SG(iDC,icount,nSS,unit_DC,SG)
 
 USE mod_parfile
@@ -253,7 +353,7 @@ sudata=0.;shot=0.;
 do j=1,nSS
 
 	pos_byte = pos_byte_su(icount) + (j-1)*(nh+nt)*4
-	READ(unit0+ifile, pos=pos_byte)  sudata(1:nh,j)	!! read data
+	READ(unit_DC0+ifile, pos=pos_byte)  sudata(1:nh,j)	!! read data
 
 enddo
 
@@ -317,7 +417,7 @@ allocate(SG(nt,NumRec))
 SG=0.;sudata=0.;
 
 
-	if(iDC.eq.0)unit_DC=unit0
+	if(iDC.eq.0)unit_DC=unit_DC0
 	if(iDC.eq.1)unit_DC=unit_DC1
 	if(iDC.eq.2)unit_DC=unit_DC2
 	Str_gnu= 'gnuplot_shot_DC'
@@ -619,6 +719,10 @@ do ifile=1,split_parts
 
 	INQUIRE(FILE=file_name, SIZE=sizeof(ifile) )
 
+        file_name = trim(adjustl(su_file_DC0)) // trim(adjustl(num_split))
+        file_name = trim(adjustl(folder_output)) // trim(adjustl(file_name))
+        open(unit_DC0+ifile,FILE=file_name,ACCESS=access,FORM=form,CONVERT='BIG_ENDIAN',STATUS='unknown')
+
 enddo
 
 if(DC.lt.0.or.DC.ge.1)	then
@@ -672,6 +776,7 @@ INTEGER :: k
 do k=1,split_parts
 
         close(unit0+k)
+        close(unit_DC0+k)
 
 	if(DC.ge.1)	then
 	        close(unit_DC1+k)

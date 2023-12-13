@@ -14,7 +14,7 @@ implicit none
 
 
   ! Control file variables
-  integer, parameter :: unit0=100
+  integer, parameter :: unit0=100,unit_DC0=200
   integer, parameter :: unit_DC1=300,unit_DC2=400
   integer, parameter :: unit_PG1=500,unit_PG2=600
 
@@ -126,13 +126,14 @@ implicit none
 	stop
   endif
 
-  if(DC.ne.1.or.DC.ne.2)then
+  if(DC.ne.0.or.DC.ne.1.or.DC.ne.2)then
 	if(rank.eq.0)write(*,*)'DC value must be 1 or 2, please introduce flag 1 or 2 at the command line'
   endif
 
   if(rank.eq.0)write(*,*) 'DC value is:', DC
 
   su_file0 = 'null'
+  su_file_DC0 = 'su_DC0_part_'
   su_file_DC1 = 'su_DC1_part_'
   su_file_DC2 = 'su_DC2_part_'
 
@@ -181,8 +182,8 @@ implicit none
 
         select case (label)
 
-        case ('DC:')
-           read(buffer, *, iostat=ios) DC
+!        case ('DC:')
+!           read(buffer, *, iostat=ios) DC
         case ('byte_shotnumber:')
            read(buffer, *, iostat=ios) byte_shotnumber
         case ('sx_sy_header:')
@@ -213,10 +214,6 @@ implicit none
            read(buffer, *, iostat=ios) folder_output
         case ('dt:')
            read(buffer, *, iostat=ios) dt
-        case ('f1:')
-           read(buffer, *, iostat=ios) f1
-        case ('f2:')
-           read(buffer, *, iostat=ios) f2
         case ('drec:')
            read(buffer, *, iostat=ios) drec
         case ('dmodel:')
@@ -529,7 +526,6 @@ write(*,*)'shot_fin: ',shot_fin
 write(*,*)'dt: ',dt
 write(*,*)'nt: ',nt
 write(*,*)'dmodel: ',dmodel
-write(*,*)'dshots: ',dshots
 write(*,*)'shot_depth: ',shot_depth
 write(*,*)'streamer_depth: ',streamer_depth
 if(reverse_streamer.ne.0)write(*,*)'reverse_streamer: ',reverse_streamer

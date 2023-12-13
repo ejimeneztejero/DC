@@ -59,6 +59,24 @@ ierr=0
 !!	WRITE STREAMER DATA TO DC IN OUTPUT FOLDER
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+if(rank.eq.0)write(*,*)
+if(rank.eq.0)write(*,*)'*******************************************'
+if(rank.eq.0)write(*,*)'PREPARING AND WRITING INPUT DATA, STEP 0'
+if(rank.eq.0)write(*,*)'*******************************************'
+
+if(DC.le.1)	then
+
+	iDC=0
+	call WRITE_SG0()
+	call MPI_barrier(MPI_COMM_WORLD,ierr)
+
+	if(save_txt.ne.0) then
+		if(rank.eq.0)write(*,*)'SAVING TXT DATA'
+		call SAVE_SHOTS_TXT(iDC)
+	endif
+
+endif
+
 if(DC.eq.1)	then
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
