@@ -468,7 +468,7 @@ write(*,*)
 write(*,*)                                                       
 write(*,*)                                                                      
 write(*,*)"		First release (2021)			"
-write(*,*)"		Author: Clara Estela Jiménez Tejero	"
+write(*,*)"		Author: Clara Estela Jimenez Tejero	"
 write(*,*)"		email: ejimenez@icm.csic.es 		"
 write(*,*)"		Barcelona Center for Subsurface Imaging "
 write(*,*)"		Instituto de Ciencias Marinas (ICM-CSIC)"

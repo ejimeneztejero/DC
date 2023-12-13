@@ -24,7 +24,7 @@ integer :: nPG
 	NumMax_PG=nPG
 	NumMaxShots_PG=maxval(NumShots_PG(1:nPG))
 
-	if(DC.eq.2) call PG_write()
+	call PG_write()
 
 end subroutine PG_function
 

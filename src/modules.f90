@@ -9,7 +9,9 @@
 
 module mod_parfile
 
+
 implicit none
+
 
   ! Control file variables
   integer, parameter :: unit0=100
@@ -50,18 +52,20 @@ implicit none
   character(len=500) :: folder_input,folder_output
   character(len=500) :: su_file0,su_file_DC0
   character(len=500) :: su_file_DC1,su_file_DC2
-  character(len=500) :: su_file_DC1_corr,su_file_DC2_corr
   character(len=500) :: su_file_PG1,su_file_PG2
   character(len=500) :: temp_DC1,temp_DC2
   character(len=500) :: temp_PG1,temp_PG2
   character(len=500) :: nav_file,vp_file
-  character(len=500) :: par_file
+  character(len=500) :: par_file,dc_str
 
   contains
 
   subroutine read_parfile(rank)
 
+
   implicit none
+!  use ISO_FORTRAN_ENV, only: IACHAR
+
   include 'mpif.h'
 
   integer :: numtasks,rank,ierr,errcode,status(MPI_STATUS_SIZE)
@@ -73,9 +77,10 @@ implicit none
   integer :: ios = 0
   integer :: line = 0
   integer :: NumMax_PG_,NumMaxShots_PG_
-
+  integer :: int1,int2
   character(len=500) :: file_name,command0,command
   character(len=50) :: Str,access,form,num_split
+  character(len=100) :: arg1, arg2
 
   logical :: su_exist,nav_exist,vp_exist
   logical :: input_exist, output_exist
@@ -84,32 +89,52 @@ implicit none
   call MPI_COMM_RANK(MPI_COMM_WORLD,rank,ierr)
 
   ierr=0;
+  DC=0;int1=0;int2=0;
 
   access = 'STREAM'
   form = 'UNFORMATTED'
 
   icount = iargc()  ! The number does not includes the executable name, so if user passed one argument, 1 is returned.
-!!  if ( icount.eq.1 ) then
-	call getarg(1, par_file)	! The file name of the executable.
-	if(rank.eq.0)write(*,*)'name par_file: ',trim(adjustl(par_file))
-	file_name = trim(adjustl(par_file))
-	INQUIRE(file=file_name,EXIST=su_exist)
-	if(.NOT. su_exist)     then
-  		if(rank.eq.0)write(*,*)'ERROR: Par_file named: ', trim(adjustl(par_file)),' does not exist'
-        	if(rank.eq.0)call ascii_art(2)
-		call MPI_barrier(MPI_COMM_WORLD,ierr)
-		call MPI_Abort(MPI_COMM_WORLD, errcode, ierr)
-		stop
-  	endif
-!!  endif
+
+  if (icount < 2) then
+
+	  if(rank.eq.0) then
+	    write(*,*) 'Error: two arguments are required in execution line:'
+	    write(*,*) '- First argument must be the Parfile. - Second argument, number 1 (for DC: 1) or 2 (for DC: 2)'
+	  endif
+
+	  if(rank.eq.0)call ascii_art(2)
+	  call MPI_barrier(MPI_COMM_WORLD,ierr)
+	  call MPI_Abort(MPI_COMM_WORLD, errcode, ierr)
+	  stop
+
+  endif
+
+  call getarg(1, par_file)
+  call getarg(2, dc_str)
+
+  read(dc_str, *)DC
+
+  if(rank.eq.0)write(*,*)'name par_file: ',trim(adjustl(par_file))
+  file_name = trim(adjustl(par_file))
+  INQUIRE(file=file_name,EXIST=su_exist)
+  if(.NOT. su_exist)     then
+	if(rank.eq.0)write(*,*)'ERROR: Par_file named: ', trim(adjustl(par_file)),' does not exist'
+       	if(rank.eq.0)call ascii_art(2)
+	call MPI_barrier(MPI_COMM_WORLD,ierr)
+	call MPI_Abort(MPI_COMM_WORLD, errcode, ierr)
+	stop
+  endif
+
+  if(DC.ne.1.or.DC.ne.2)then
+	if(rank.eq.0)write(*,*)'DC value must be 1 or 2, please introduce flag 1 or 2 at the command line'
+  endif
+
+  if(rank.eq.0)write(*,*) 'DC value is:', DC
 
   su_file0 = 'null'
-  su_file_DC0 = 'su_DC0_part_'
   su_file_DC1 = 'su_DC1_part_'
   su_file_DC2 = 'su_DC2_part_'
-
-  su_file_DC1_corr = 'su_DC1_corrected_part_'
-  su_file_DC2_corr = 'su_DC2_corrected_part_'
 
   su_file_PG1 = 'su_PG1_part_'
   su_file_PG2 = 'su_PG2_part_'
@@ -133,10 +158,9 @@ implicit none
   far_offset=0.;far_offset_grid=0;
 
   water_velocity=1500.
-  drec=0;dmodel=0;dt=0;
+  drec=0;dmodel=0;dt=0;dshots=0;
   shot_depth=0;streamer_depth=0;
   NumRec=0;nt=0;split_parts=1;
-  DC=0;
   step_txt=50;
   save_gmt=0;save_matlab=0;
   open(fh, file=par_file)
@@ -251,11 +275,11 @@ NumShots=shot_fin-shot_init+1
 far_offset=(NumRec-1)*drec+near_offset
 far_offset_grid=1+ceiling(far_offset/dmodel)
 
-NumMaxShots_PG_=1+ceiling(far_offset/dshots)	!!numero maximo de shots por PG
-NumMaxShots_PG=NumMaxShots_PG_+ceiling(NumMaxShots_PG_/5.)
+!NumMaxShots_PG_=1+ceiling(far_offset/dshots)	!!numero maximo de shots por PG
+!NumMaxShots_PG=NumMaxShots_PG_+ceiling(NumMaxShots_PG_/5.)
 
-NumMax_PG_=1+ceiling((NumShots-1)*dshots+far_offset)/dmodel
-NumMax_PG=NumMax_PG_+ceiling(NumMax_PG_/5.)
+!NumMax_PG_=1+ceiling((NumShots-1)*dshots+far_offset)/dmodel
+!NumMax_PG=NumMax_PG_+ceiling(NumMax_PG_/5.)
 
 if(added_space_model_X.eq.0)added_space_model_X=20.*dmodel
 if(added_space_model_Y.eq.0)added_space_model_Y=20.*dmodel
@@ -326,7 +350,7 @@ endif
 
 if(DC.gt.2)    then
 
-        if(rank.eq.0)write(*,*)'ERROR: wrong value for DC parameter. It must be negative, 0, 1, or 2'
+        if(rank.eq.0)write(*,*)'ERROR: wrong value for DC parameter. It must be 1 or 2'
         if(rank.eq.0)call ascii_art(2)
 
         call MPI_barrier(MPI_COMM_WORLD,ierr)
@@ -381,6 +405,15 @@ if(water_velocity.le.1400)	then
 endif
 endif
 
+!if(dshots.eq.0) then
+!	if(rank.eq.0)write(*,*) 'ERROR: Please give an average value to dshots (meters) in ',trim(adjustl(par_file))
+!        if(rank.eq.0)call ascii_art(2)
+!
+!        call MPI_barrier(MPI_COMM_WORLD,ierr)
+!        call MPI_Abort(MPI_COMM_WORLD, errcode, ierr)
+!	stop
+!endif
+
 if(dt.eq.0) then
 	if(rank.eq.0)write(*,*) 'ERROR: Please give a value to dt (seconds) in ',trim(adjustl(par_file))
         if(rank.eq.0)call ascii_art(2)
@@ -433,15 +466,6 @@ endif
 
 if(shot_init.le.0) then
 	if(rank.eq.0)write(*,*) 'ERROR: Please give a correct value to shot_init in ',trim(adjustl(par_file))
-        if(rank.eq.0)call ascii_art(2)
-
-        call MPI_barrier(MPI_COMM_WORLD,ierr)
-        call MPI_Abort(MPI_COMM_WORLD, errcode, ierr)
-	stop
-endif
-
-if(shot_fin.lt.shot_init) then
-	if(rank.eq.0)write(*,*) 'ERROR: Please give a correct value to shot_fin in ',trim(adjustl(par_file))
         if(rank.eq.0)call ascii_art(2)
 
         call MPI_barrier(MPI_COMM_WORLD,ierr)
@@ -672,13 +696,13 @@ integer :: NumPG,NumS
 
 	pos_byte_PG=0
 	NumShots_PG=0
+	PG_location=0
+	ifile_PG=0
+
 	shot_grid_PG=0
 	trace_grid_PG=0
 	pos_trace_grid_PG=0
-
-	PG_location=0
 	pos_shot_grid_PG=0
-	ifile_PG=0
 
 end subroutine	allocate_PG_arrays
 
@@ -687,12 +711,13 @@ subroutine deallocate_PG_arrays
 
 	deallocate(pos_byte_PG)
 	deallocate(NumShots_PG)
+	deallocate(PG_location)
+	deallocate(ifile_PG)
+
 	deallocate(shot_grid_PG)
 	deallocate(trace_grid_PG)
 	deallocate(pos_trace_grid_PG)
-	deallocate(PG_location)
 	deallocate(pos_shot_grid_PG)
-	deallocate(ifile_PG)
 	
 end subroutine deallocate_PG_arrays
 

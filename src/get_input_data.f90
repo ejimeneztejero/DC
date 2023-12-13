@@ -85,6 +85,7 @@ include 'mpif.h'
         if(rank.eq.0)write(*,*)'********************************************'
 
         call get_geometry(rank,NumBat,length_model,nmodel,add1)
+	if(rank.eq.0)write(*,*)"Average distance between shots (meters), dshots: ",dshots
 
         do i=1,NumShots
 
@@ -242,11 +243,11 @@ USE mod_SG_arrays
 
 implicit none
 
-        integer :: rank,j,k,ii,ishot
+        integer :: rank,j,k,ii,ishot,nn,n_PG
 	integer :: iline,itr,NumBat,ERR,nlines
         integer :: shotID,nmodel
 
-        real :: xs,ys,bat,x1,y1,twt,add1
+        real :: xs,ys,bat,x1,y1,twt,add1,dd
         real :: length_model,length_streamer,NearOffset
 
         character (len=500) :: file_name,file_name2
@@ -359,6 +360,19 @@ implicit none
                 enddo
 
         enddo
+
+        nn=0
+        do ishot=2,nlines !!number of lines nav_file
+                nn=nn+1
+                dd=dd+abs(pos_shot(ishot)-pos_shot(ishot-1))
+        enddo
+        dshots=ceiling(dd/nn)
+
+	n_PG=1+ceiling(far_offset/dshots)    !!numero maximo de shots por PG
+	NumMaxShots_PG=n_PG+ceiling(n_PG/5.)
+
+	n_PG=1+ceiling((NumShots-1)*dshots+far_offset)/dmodel
+	NumMax_PG=n_PG+ceiling(n_PG/5.)
 
 	length_model=pos_shot(NumShots)+added_space_model_X	!!metros
 

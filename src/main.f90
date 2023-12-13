@@ -59,73 +59,65 @@ ierr=0
 !!	WRITE STREAMER DATA TO DC IN OUTPUT FOLDER
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-if(DC.eq.0.or.DC.eq.1)	then
-
-
-	if(DC.eq.1)	then
+if(DC.eq.1)	then
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!! START DC
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-if(rank.eq.0)write(*,*)
-if(rank.eq.0)write(*,*)'*******************************************'
-if(rank.eq.0)write(*,*)'DOWNWARD CONTINUATION'
-if(rank.eq.0)write(*,*)'*******************************************'
+	if(rank.eq.0)write(*,*)
+	if(rank.eq.0)write(*,*)'*******************************************'
+	if(rank.eq.0)write(*,*)'DOWNWARD CONTINUATION'
+	if(rank.eq.0)write(*,*)'*******************************************'
 
-if(rank.eq.0)write(*,*)
-if(rank.eq.0)write(*,*)'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
-if(rank.eq.0)write(*,*)
-if(rank.eq.0)write(*,*)'FIRST STEP IN DC: redatuming receivers from datum 1 to datum 2'
-if(rank.eq.0)write(*,*)
-if(rank.eq.0)write(*,*)'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
+	if(rank.eq.0)write(*,*)
+	if(rank.eq.0)write(*,*)'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+	if(rank.eq.0)write(*,*)
+	if(rank.eq.0)write(*,*)'FIRST STEP IN DC: redatuming receivers from datum 1 to datum 2'
+	if(rank.eq.0)write(*,*)
+	if(rank.eq.0)write(*,*)'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
 
 	iDC=1
-	call DC_function(iDC,&
-	NumShots,NumRec,&
-	datum1_rec,datum2)
+	call DC_function(iDC,NumShots,NumRec,datum1_rec,datum2)
 
         if(save_txt.eq.1) then
                 if(rank.eq.0)write(*,*)'SAVING TXT DATA'
                 call SAVE_SHOTS_TXT(iDC)
         endif
 
-	endif!DC=1
+endif!DC=1
 
-endif!DC=0,DC=1
 
 if(DC.eq.2)        then
 
 	iDC=2
 
-if(rank.eq.0)write(*,*)
-if(rank.eq.0)write(*,*)'{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{'
-if(rank.eq.0)write(*,*)
-if(rank.eq.0)write(*,*)'CONVERSION OF SHOT GATHERS TO POINT GATHERS ...'
-if(rank.eq.0)write(*,*)
-if(rank.eq.0)write(*,*)'}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}'
+	if(rank.eq.0)write(*,*)
+	if(rank.eq.0)write(*,*)'{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{'
+	if(rank.eq.0)write(*,*)
+	if(rank.eq.0)write(*,*)'CONVERSION OF SHOT GATHERS TO POINT GATHERS ...'
+	if(rank.eq.0)write(*,*)
+	if(rank.eq.0)write(*,*)'}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}'
 
 	call PG_function()
 
-if(rank.eq.0)write(*,*)
-if(rank.eq.0)write(*,*)
-if(rank.eq.0)write(*,*)'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
-if(rank.eq.0)write(*,*)
-if(rank.eq.0)write(*,*)'SECOND STEP IN DC: redatuming sources from datum 1 to datum 2'
-if(rank.eq.0)write(*,*)
-if(rank.eq.0)write(*,*)'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
-if(rank.eq.0)write(*,*)
+	if(rank.eq.0)write(*,*)
+	if(rank.eq.0)write(*,*)
+	if(rank.eq.0)write(*,*)'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+	if(rank.eq.0)write(*,*)
+	if(rank.eq.0)write(*,*)'SECOND STEP IN DC: redatuming sources from datum 1 to datum 2'
+	if(rank.eq.0)write(*,*)
+	if(rank.eq.0)write(*,*)'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
+	if(rank.eq.0)write(*,*)
 
-	call DC_function(iDC,&
-	NumMax_PG,NumMaxShots_PG,&
-	datum1_shot,datum2)
+	call DC_function(iDC,NumMax_PG,NumMaxShots_PG,datum1_shot,datum2)
 
-if(rank.eq.0)write(*,*)
-if(rank.eq.0)write(*,*)'{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{'
-if(rank.eq.0)write(*,*)
-if(rank.eq.0)write(*,*)'CONVERSION OF POINT GATHER TO SHOT GATHERS ...'
-if(rank.eq.0)write(*,*)
-if(rank.eq.0)write(*,*)'}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}'
+	if(rank.eq.0)write(*,*)
+	if(rank.eq.0)write(*,*)'{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{'
+	if(rank.eq.0)write(*,*)
+	if(rank.eq.0)write(*,*)'CONVERSION OF POINT GATHER TO SHOT GATHERS ...'
+	if(rank.eq.0)write(*,*)
+	if(rank.eq.0)write(*,*)'}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}'
 
 	call SG_function()
 
@@ -138,7 +130,6 @@ if(rank.eq.0)write(*,*)'}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
 
 endif	!DC=2
 
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!! 			END DOWNWARD CONTINUATION
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -148,14 +139,6 @@ if(rank.eq.0)   then
         end   = MPI_Wtime()
         write(*,*)
 	write(*,*) 'The whole process took',nint((end-start)/60),'minutes'
-
-!	file_name = "cp" // " " // trim(adjustl(par_file))
-!	command = trim(adjustl(file_name)) // " " // trim(adjustl(folder_output))
-!	call system(command)
-
-!	file_name= "cp job*"
-!	command = trim(adjustl(file_name)) // " " // trim(adjustl(folder_output))
-!	call system(command)
 
 	call ascii_art(3)
 
