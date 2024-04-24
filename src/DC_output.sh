@@ -23,19 +23,21 @@ cd $output_folder
 
 if [[ $answer0 = yes ]]; then 
 
+sgy_DC="DC0.sgy"
+su_DC="DC0.su"
+
 echo
 echo 'DC0:'
 echo "First step: join all files in one"
 
-file_DC0=su_output_DC0
-DC0_part=${file_DC0}_part_
-cat ${DC0_part}* > ${file_DC0}
+echo
+read -p "Name of files without the number: " DC_part
+cat ${DC_part}* > ${su_DC}
 
 echo "Second step: convert .su file to .sgy file"
 
-sgy_DC0=output_DC0
-segyhdrs < $file_DC0
-segywrite < $file_DC0 tape=${sgy_DC0}.sgy
+segyhdrs < $su_DC
+segywrite < $su_DC tape=${sgy_DC}
 echo ''
 
 fi
@@ -44,18 +46,21 @@ fi
 
 if [[ $answer1 = yes ]]; then 
 
+su_DC="DC1.su"
+sgy_DC="DC1.sgy"
+
 echo
 echo 'DC1'
 
 echo "First step: join all files in one"
-file_DC1=su_output_DC1
-DC1_part=${file_DC1}_part_
-cat ${DC1_part}* > ${file_DC1}
+
+echo
+read -p "Name of files without the number: " DC_part
+cat ${DC_part}* > ${su_DC}
 
 echo "Second step: convert .su file to .sgy file"
-sgy_DC1=output_DC1
-segyhdrs < $file_DC1
-segywrite < $file_DC1 tape=${sgy_DC1}.sgy
+segyhdrs < $su_DC
+segywrite < $su_DC tape=${sgy_DC}
 echo ''
 
 fi
@@ -64,18 +69,22 @@ fi
 
 if [[ $answer2 = yes ]]; then 
 
+su_DC="DC2.su"
+sgy_DC="DC2.sgy"
+
 echo
 echo 'DC2'
 
 echo "First step: join all files in one"
-file_DC2=su_output_DC2
-DC2_part=${file_DC2}_part_
-cat ${DC2_part}* > ${file_DC2}
+
+echo
+read -p "Name of files without the number: " DC_part
+cat ${DC_part}* > ${su_DC}
 
 echo "Second step: convert .su file to .sgy file"
-sgy_DC2=output_DC2
-segyhdrs < $file_DC2
-segywrite < $file_DC2 tape=${sgy_DC2}.sgy
+segyhdrs < $su_DC
+segywrite < $su_DC tape=${sgy_DC}
+echo ''
 
 fi
 

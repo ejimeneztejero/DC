@@ -268,25 +268,11 @@ implicit none
 
 		shotID=0;xs=0;ys=0;twt=0;bat=0;NearOffset=0;
 
+	        length_streamer=(NumRec-1)*drec !! metros
+
 !!!		POSITION (UTM) OF SHOT GATHERS, AND BAT 
 
-		if(sx_sy_header.eq.0)	then
-
-			if(TWT_option.eq.0)	then
-				read(10,*)shotID,xs,ys,bat
-			endif
-
-			if(TWT_option.eq.1)	then
-				read(10,*)shotID,xs,ys,twt
-				bat=water_velocity*twt/2.
-			endif
-
-	                ii=shotID-shot_init+1
-	       	        shotID_nav(ii)=shotID
-
-		endif!sx_sy_header
-
-		if(sx_sy_header.eq.1)	then
+		if(reg_grid.eq.1)	then
 
 			if(TWT_option.eq.0)	then
 				read(10,*)shotID,bat
@@ -299,34 +285,66 @@ implicit none
 
 	                ii=shotID-shot_init+1	!!ii, "icount"
 	       	        shotID_nav(ii)=shotID
-			xs=sx_su(ii)
-			ys=sy_su(ii)
+			xs=(ii-1)*dshots
+			ys=0
 
 		endif
+
+		if(reg_grid.eq.0)	then
+
+			if(sx_sy_header.eq.0)	then
+
+				if(TWT_option.eq.0)	then
+					read(10,*)shotID,xs,ys,bat
+				endif
+
+				if(TWT_option.eq.1)	then
+					read(10,*)shotID,xs,ys,twt
+					bat=water_velocity*twt/2.
+				endif
+
+	                	ii=shotID-shot_init+1
+	       	        	shotID_nav(ii)=shotID
+
+			endif!sx_sy_header
+
+			if(sx_sy_header.eq.1)	then
+
+				if(TWT_option.eq.0)	then
+					read(10,*)shotID,bat
+				endif
+
+				if(TWT_option.eq.1)	then
+					read(10,*)shotID,twt
+					bat=water_velocity*twt/2.
+				endif
+
+	        	        ii=shotID-shot_init+1	!!ii, "icount"
+	       		        shotID_nav(ii)=shotID
+				xs=sx_su(ii)
+				ys=sy_su(ii)
+
+			endif
+
 
 !!!		POSITION NEAR OFFSET AND OFFSETS 
 
-		if(offset_header.eq.1)	then
+			if(offset_header.eq.1)	then
+				near_offset=abs(offset_su(1,ii))
+				length_streamer=abs(offset_su(1,ii)-offset_su(NumRec,ii))
+			endif
 
-			near_offset=abs(offset_su(1,ii))
-			length_streamer=abs(offset_su(1,ii)-offset_su(NumRec,ii))
-
-		else if(offset_header.eq.0)	then
-
-		        length_streamer=(NumRec-1)*drec !! metros
-
-		endif
+		endif	! reg_grid
 
 		NearOffset=abs(near_offset)
 		add1=NearOffset+length_streamer+added_space_model_X !! metros, distancia a (x1,y1)
 
-                if(ii.eq.1)  then
-                        x1=xs;y1=ys
-                endif
+        	if(ii.eq.1)  then
+        		x1=xs;y1=ys
+        	endif
 
                 pos_shot(ii) = add1+sqrt((xs-x1)**2.+(ys-y1)**2.) !! distancia entre cada shot y el primero
 
-!                pos_shot_grid(ii)=1+nint(pos_shot(ii)/dmodel)
                 pos_shot_grid(ii)=1+ceiling(pos_shot(ii)/dmodel)
 
                 if(bat.ne.bat.or.bat.eq.0)      then    !localiza NaN y CEROS
@@ -366,7 +384,7 @@ implicit none
                 nn=nn+1
                 dd=dd+abs(pos_shot(ishot)-pos_shot(ishot-1))
         enddo
-        dshots=ceiling(dd/nn)
+        if(reg_grid.eq.0)dshots=ceiling(dd/nn)
 
 	n_PG=1+ceiling(far_offset/dshots)    !!numero maximo de shots por PG
 	NumMaxShots_PG=n_PG+ceiling(n_PG/5.)

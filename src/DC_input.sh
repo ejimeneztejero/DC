@@ -17,8 +17,10 @@ fi
 cd $input_folder
 
 
-name=$(basename "$input" | cut -d. -f1)
-su_name=${name}
+#name=$(basename "$input" | cut -d. -f1)
+#su_name=${name}
+
+su_name=${input}
 
 
 if [ "$SGY_SU" = 1 ]; then
@@ -49,7 +51,7 @@ shots1file=$((maxbytes/bytes1shot))
 echo "shots in each part: $shots1file";
 
 size_part=$((shots1file*bytes1shot))
-echo "size (bytes) in each part: $size_part";
+echo "size (bytes): $size_part";
 
 declare -i num_parts
 quotient=$((size/size_part))

@@ -28,7 +28,7 @@ implicit none
   
   INTEGER(4) :: byte_shotnumber
 
-  integer :: DC,reverse_streamer
+  integer :: DC,reverse_streamer,reg_grid
   integer :: nt,NumRec,NumShots
   integer :: shot_init,shot_fin
   integer :: far_offset_grid
@@ -148,6 +148,7 @@ implicit none
   nav_file = 'null'
   vp_file = 'null'
 
+  reg_grid=1
   byte_shotnumber= byte_fldr
   sx_sy_header=0;offset_header=0;offset_unit=1
   TWT_option=0;
@@ -184,6 +185,8 @@ implicit none
 
 !        case ('DC:')
 !           read(buffer, *, iostat=ios) DC
+        case ('reg_grid:')
+           read(buffer, *, iostat=ios) reg_grid
         case ('byte_shotnumber:')
            read(buffer, *, iostat=ios) byte_shotnumber
         case ('sx_sy_header:')
@@ -402,14 +405,14 @@ if(water_velocity.le.1400)	then
 endif
 endif
 
-!if(dshots.eq.0) then
-!	if(rank.eq.0)write(*,*) 'ERROR: Please give an average value to dshots (meters) in ',trim(adjustl(par_file))
-!        if(rank.eq.0)call ascii_art(2)
-!
-!        call MPI_barrier(MPI_COMM_WORLD,ierr)
-!        call MPI_Abort(MPI_COMM_WORLD, errcode, ierr)
-!	stop
-!endif
+if(dshots.eq.0.and.reg_grid.eq.1) then
+	if(rank.eq.0)write(*,*) 'ERROR: Please give an average value to dshots (meters) in ',trim(adjustl(par_file))
+        if(rank.eq.0)call ascii_art(2)
+
+        call MPI_barrier(MPI_COMM_WORLD,ierr)
+        call MPI_Abort(MPI_COMM_WORLD, errcode, ierr)
+	stop
+endif
 
 if(dt.eq.0) then
 	if(rank.eq.0)write(*,*) 'ERROR: Please give a value to dt (seconds) in ',trim(adjustl(par_file))
@@ -497,8 +500,12 @@ if(sx_sy_header.eq.0)	then
 	write(*,*)'sx_sy_header: ',sx_sy_header
 	write(*,*)'No shot gathers geometry in headers'
 	write(*,*)'TWT_option: ',TWT_option
-	if(TWT_option.eq.0)write(*,*)'nav_file should contain: ShotID	Xshot(UTM)	Yshot(UTM)	Z(m)'
-	if(TWT_option.eq.1)write(*,*)'nav_file should contain: ShotID	Xshot(UTM)	Yshot(UTM)	TWT(s)'
+	if(reg_grid.eq.1.and.TWT_option.eq.0)write(*,*)'nav_file minimum should contain: ShotID Z(m)'
+	if(reg_grid.eq.1.and.TWT_option.eq.1)write(*,*)'nav_file minimum should contain: ShotID TWT(s)'
+	if(reg_grid.eq.0)	then
+		if(TWT_option.eq.0)write(*,*)'nav_file should contain: ShotID	Xshot(UTM)	Yshot(UTM)	Z(m)'
+		if(TWT_option.eq.1)write(*,*)'nav_file should contain: ShotID	Xshot(UTM)	Yshot(UTM)	TWT(s)'
+	endif
 endif
 
 write(*,*)'offset_header: ',offset_header
@@ -517,6 +524,8 @@ write(*,*)'Output folder: ',adjustl(trim(folder_output))
 write(*,*)'name of data file (SU): ',adjustl(trim(su_file0))
 write(*,*)'split_parts: ',split_parts
 write(*,*)'name of navigation file: ',adjustl(trim(nav_file))
+if(reg_grid.eq.1)write(*,*)'REGULAR GRID FOR SHOTS AND RECEIVERS'
+if(reg_grid.eq.1)write(*,*)'dshots: ',dshots
 write(*,*)'drec: ',drec
 write(*,*)'NumRec: ',NumRec
 write(*,*)'NumShots: ',NumShots
