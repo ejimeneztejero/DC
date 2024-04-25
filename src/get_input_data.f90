@@ -260,6 +260,38 @@ implicit none
 
 	endif
 
+	if(rank.eq.0.and.DC.eq.1.and.print_geom.eq.1) then
+
+		write(*,*)
+		write(*,*)"CREATING FOLDER: GEOM"
+		folder_name=trim(adjustl(folder_output))// 'GEOM/'
+                command="mkdir "  // trim(adjustl(folder_name)) 
+		write(*,*)trim(adjustl(command))
+
+                call system(command)
+
+		write(*,*)
+		write(*,*)"PRINT GEOMETRY FOR SHOTS AND RECS IN FOLDER GEOM"
+
+		file_name=trim(adjustl(folder_name))// 'pos_shots.dat'
+		open(unit=14,file=file_name,status='unknown')
+!!		Print geometry for shots and receivers
+		do i=1,NumShots
+			write(Str,*)shotID_nav(i)
+			write(14,*)shotID_nav(i),pos_shot(i)-added_space_model_X
+
+			file_name=trim(adjustl(folder_name))// 'pos_recs.shot.' // trim(adjustl(Str)) // '.dat'
+			open(unit=12,file=file_name,status='unknown')
+			do j=1,NumRec
+				write(12,*)j,pos_trace(j,i)-added_space_model_X
+			enddo
+			close(12)
+		enddo
+		close(14)
+
+
+	endif
+
 	deallocate(bat_model,xmodel)
 	deallocate(xmodel_,xbat_)
 	deallocate(bat_model_shot,bat_pos_shot)

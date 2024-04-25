@@ -29,7 +29,7 @@ implicit none
   INTEGER(4) :: byte_shotnumber
 
   integer :: DC,reverse_streamer,reg_grid
-  integer :: nt,NumRec,NumShots,print_bat
+  integer :: nt,NumRec,NumShots,print_bat,print_geom
   integer :: shot_init,shot_fin
   integer :: far_offset_grid
 
@@ -148,7 +148,8 @@ implicit none
   nav_file = 'null'
   vp_file = 'null'
 
-  print_bat=1
+  print_bat=0
+  print_geom=0
   reg_grid=1
   byte_shotnumber= byte_fldr
   sx_sy_header=0;offset_header=0;offset_unit=1
@@ -188,6 +189,8 @@ implicit none
 !           read(buffer, *, iostat=ios) DC
         case ('print_bat:')
            read(buffer, *, iostat=ios) print_bat
+        case ('print_geom:')
+           read(buffer, *, iostat=ios) print_geom
         case ('reg_grid:')
            read(buffer, *, iostat=ios) reg_grid
         case ('byte_shotnumber:')
