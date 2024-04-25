@@ -181,7 +181,7 @@ implicit none
 
 	real, allocatable :: bat_model(:),xmodel(:),xmodel_(:),xbat_(:)
 	real, allocatable :: bat_pos_shot(:),bat_model_shot(:)
-	character (len=500) :: file_name
+	character (len=500) :: command,Str,folder_name,file_name
 
 	allocate(bat_model(nmodel),xmodel(nmodel))
 	allocate(xmodel_(NumBat+2),xbat_(NumBat+2))
@@ -219,14 +219,44 @@ implicit none
 		bat_model_grid(j)=1+ceiling(bat_model(j)/dmodel)
 	enddo
 
-	if(rank.eq.0)	then
+	if(rank.eq.0.and.DC.eq.1.and.print_bat.eq.1) then
 
-	file_name=trim(adjustl(folder_output))//'bathymetry_meters.txt'
-	open(unit=12,file=file_name,status='unknown')
-	do j=1,nmodel
-		write(12,*)xmodel(j),-bat_model(j)
-	enddo
-	close(12)
+		write(*,*)
+		write(*,*)"CREATING FOLDER: BAT"
+
+		folder_name=trim(adjustl(folder_output))// 'BAT/'
+                command="mkdir "  // trim(adjustl(folder_name)) 
+		write(*,*)trim(adjustl(command))
+
+                call system(command)
+
+		write(*,*)
+		write(*,*)"PRINT BATHYMETRY FOR MODEL, SHOTS AND RECS IN FOLDER BAT"
+
+!!		Print bathymetry for the model
+
+		file_name=trim(adjustl(folder_name))//'bat_model.dat'
+		open(unit=12,file=file_name,status='unknown')
+		do j=1,nmodel
+			write(12,*)xmodel(j),-bat_model(j)
+		enddo
+		close(12)
+
+		file_name=trim(adjustl(folder_name))// 'bat_shots.dat'
+		open(unit=14,file=file_name,status='unknown')
+!!		Print bathymetry for shots and receivers
+		do i=1,NumShots
+			write(Str,*)shotID_nav(i)
+			write(14,*)shotID_nav(i),-bat_model(pos_shot_grid(i))
+
+			file_name=trim(adjustl(folder_name))// 'bat_recs.shot.' // trim(adjustl(Str)) // '.dat'
+			open(unit=12,file=file_name,status='unknown')
+			do j=1,NumRec
+				write(12,*)j,-bat_model(pos_trace_grid(j,i))
+			enddo
+			close(12)
+		enddo
+		close(14)
 
 	endif
 
