@@ -271,16 +271,16 @@ implicit none
                 call system(command)
 
 		write(*,*)
-		write(*,*)"PRINT GEOMETRY FOR SHOTS AND RECS IN FOLDER GEOM"
+		write(*,*)"PRINT GEOMETRY WITHIN THE MODEL, FOR SHOTS AND RECS IN FOLDER GEOM"
 
-		file_name=trim(adjustl(folder_name))// 'pos_shots.dat'
+		file_name=trim(adjustl(folder_name))// 'geom_shots.dat'
 		open(unit=14,file=file_name,status='unknown')
 !!		Print geometry for shots and receivers
 		do i=1,NumShots
 			write(Str,*)shotID_nav(i)
 			write(14,*)shotID_nav(i),pos_shot(i)-added_space_model_X
 
-			file_name=trim(adjustl(folder_name))// 'pos_recs.shot.' // trim(adjustl(Str)) // '.dat'
+			file_name=trim(adjustl(folder_name))// 'geom_recs.shot.' // trim(adjustl(Str)) // '.dat'
 			open(unit=12,file=file_name,status='unknown')
 			do j=1,NumRec
 				write(12,*)j,pos_trace(j,i)-added_space_model_X
