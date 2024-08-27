@@ -228,8 +228,10 @@ ddy=1+floor(added_space_model_Y/dmodel) !!added model space in y-axis (points)
 	x_f=maxval(nxRec)+ddx
 	if(x_f.gt.nx)x_f=nx;	
 
-        y_i=1;y_f=maxval(nyRec)+ddy;
-        
+        y_i=1;
+	y_f=maxval(nyRec)+ddy;
+        if(y_f.gt.ny)y_f=ny;
+	
 	nx_DC=x_f-x_i+1;ny_DC=y_f-y_i+1
 
 	allocate(model(ny_DC,nx_DC))
