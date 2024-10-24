@@ -148,8 +148,8 @@ implicit none
   nav_file = 'null'
   vp_file = 'null'
 
-  print_bat=0
-  print_geom=0
+  print_bat=1
+  print_geom=1
   reg_grid=0
   byte_shotnumber= byte_fldr
   sx_sy_header=0;offset_header=0;offset_unit=1
