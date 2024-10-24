@@ -305,7 +305,7 @@ if(shotID_(icount).ne.0.and.icount.le.nsamples)     then
 
                         pos_byte = pos_byte_su(icount) + (j-1)*(nh+nt)*4
                         jrec=NumRec-j+1
-                        WRITE(unit_DC0+ifile, pos=pos_byte)  sudata2(1:nh+nt,jrec)	!! write header
+                        WRITE(unit_DC0+ifile, pos=pos_byte)  sudata2(1:nh+nt,jrec)	!! write always "direct"
 
                 enddo
 
@@ -397,7 +397,8 @@ integer :: unit_DC,step
 integer(4) :: pos_r,pos_read,fldr
 
 character(len=50) :: Str0,Str_,Str_txt,Str_DC,Str
-character(len=50) :: Str_mat,Str_gnu
+character(len=50) :: Str_mat,Str_gmt
+character(len=500) :: command
 character(len=500) :: file_name,file_name2,file_name3
 character(len=500) :: file_name4,file_name5,file_name6
 
@@ -420,9 +421,8 @@ SG=0.;sudata=0.;
 	if(iDC.eq.0)unit_DC=unit_DC0
 	if(iDC.eq.1)unit_DC=unit_DC1
 	if(iDC.eq.2)unit_DC=unit_DC2
-	Str_gnu= 'gnuplot_shot_DC'
-	Str_mat= 'matlab_shot_DC'
-
+	!Str_gmt= 'gmt_shot_DC'
+	!Str_mat= 'matlab_shot_DC'
 
 
 write(Str_DC,*) iDC
@@ -449,15 +449,36 @@ allocate(period(step))
 
 do i=1,step
 
-	period(i)=(i-1)*step_txt
-
+	period(i)=1+(i-1)*step_txt
+	!write(*,*)"i,period: ",i,period(i)
 enddo
+
+!write(*,*)"ntimes: ",ntimes,nsamples
+
+!if(save_matlab.eq.1)	then
+!               write(*,*)
+!                write(*,*)"CREATING FOLDER: MATLAB"
+!                folder_matlab=trim(adjustl(folder_output))// 'MATLAB/'
+!                command="mkdir "  // trim(adjustl(folder_matlab))
+!                write(*,*)trim(adjustl(command))
+!                call system(command)
+!endif
+!if(save_gmt.eq.1)	then
+!               write(*,*)
+!                write(*,*)"CREATING FOLDER: GMT"
+!                folder_gmt=trim(adjustl(folder_output))// 'GMT/'
+!                command="mkdir "  // trim(adjustl(folder_gmt))
+!                write(*,*)trim(adjustl(command))
+!                call system(command)
+!endif
 
 do itimes=1,ntimes
 
 	icount=(itimes-1)*numtasks+rank+1        !!aquí sucede la paralelización
 
 	if(shotID_(icount).ne.0.and.icount.le.nsamples)	then
+
+!	write(*,*)"here 1, step: ", step
 
 	do i=1,step
 
@@ -484,28 +505,31 @@ do itimes=1,ntimes
 
 		if(save_matlab.ne.0)	then
 
-		file_name = trim(adjustl(folder_output)) // trim(adjustl(Str_mat))  
+		file_name = trim(adjustl(folder_matlab)) // "shot_DC"  
 		file_name2 = trim(adjustl(file_name)) // trim(adjustl(Str_DC))
-		file_name3 = trim(adjustl(file_name2)) // trim(adjustl(Str_))
+		file_name3 = trim(adjustl(file_name2)) // "_"
 		file_name4 = trim(adjustl(file_name3)) // trim(adjustl(Str)) 
-		file_name5 = trim(adjustl(file_name4)) // trim(adjustl(Str_txt))
+		file_name5 = trim(adjustl(file_name4)) // ".matlab"
 
+!		write(*,*)"OJOOO saving matlab: ",file_name5,nt,NumRec
 
 		open(12,FILE=file_name5,STATUS='unknown')
 	        do k=1,nt
 			write(12,'(20000(e12.5,2x))') (SG(k,j),j=1,NumRec)
-        	enddo
+	      	enddo
 		close(12)
 
 		endif	!matlab
 
 		if(save_gmt.ne.0)	then
 
-		file_name = trim(adjustl(folder_output)) // trim(adjustl(Str_gnu))  
+		file_name = trim(adjustl(folder_gmt)) // "shot_DC"  
 		file_name2 = trim(adjustl(file_name)) // trim(adjustl(Str_DC))
-		file_name3 = trim(adjustl(file_name2)) // trim(adjustl(Str_))
+		file_name3 = trim(adjustl(file_name2)) // "_"
 		file_name4 = trim(adjustl(file_name3)) // trim(adjustl(Str)) 
-		file_name5 = trim(adjustl(file_name4)) // trim(adjustl(Str_txt))
+		file_name5 = trim(adjustl(file_name4)) // ".gmt"
+
+!		write(*,*)"OJOOO saving gmt: ",file_name5
 
 		open(12,FILE=file_name5,STATUS='unknown')
 
@@ -516,7 +540,7 @@ do itimes=1,ntimes
 		enddo
 		close(12)
 
-		endif	!gnuplot
+		endif	!gmt
 
 		endif
 

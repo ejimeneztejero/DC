@@ -89,7 +89,8 @@ if(iDC.eq.1) then
 	nSSS=nSS
 	ifile=ifile_su(icount)
 	pos_byte=pos_byte_su(icount)
-	unit_file1=unit0
+!	unit_file1=unit0
+	unit_file1=unit_DC0
 	unit_file2=unit_DC1
 
 	allocate(pos_grid(nSSS))
@@ -228,10 +229,8 @@ ddy=1+floor(added_space_model_Y/dmodel) !!added model space in y-axis (points)
 	x_f=maxval(nxRec)+ddx
 	if(x_f.gt.nx)x_f=nx;	
 
-        y_i=1;
-	y_f=maxval(nyRec)+ddy;
-        if(y_f.gt.ny)y_f=ny;
-	
+        y_i=1;y_f=maxval(nyRec)+ddy;
+        
 	nx_DC=x_f-x_i+1;ny_DC=y_f-y_i+1
 
 	allocate(model(ny_DC,nx_DC))

@@ -50,6 +50,8 @@ implicit none
   real :: f1,f2
 
   character(len=500) :: folder_input,folder_output
+  character(len=500) :: folder_gmt,folder_matlab
+
   character(len=500) :: su_file0,su_file_DC0
   character(len=500) :: su_file_DC1,su_file_DC2
   character(len=500) :: su_file_PG1,su_file_PG2
@@ -72,7 +74,7 @@ implicit none
 
   ! Input related variables
   character(len=200) :: buffer,label
-  integer :: pos,icount,i,ifile,interval
+  integer :: pos,icount,i,ifile,interval,DC_b
   integer, parameter :: fh = 10
   integer :: ios = 0
   integer :: line = 0
@@ -89,18 +91,21 @@ implicit none
   call MPI_COMM_RANK(MPI_COMM_WORLD,rank,ierr)
 
   ierr=0;
-  DC=0;int1=0;int2=0;
+  DC=-10;int1=0;int2=0;
 
   access = 'STREAM'
   form = 'UNFORMATTED'
 
   icount = iargc()  ! The number does not includes the executable name, so if user passed one argument, 1 is returned.
 
-  if (icount < 2) then
-
+!  if (icount < 2) then
+  if (icount < 1) then
 	  if(rank.eq.0) then
-	    write(*,*) 'Error: two arguments are required in execution line:'
-	    write(*,*) '- First argument must be the Parfile. - Second argument, number 1 (for DC: 1) or 2 (for DC: 2)'
+	    write(*,*)
+	    write(*,*)
+	    write(*,*) 'ERROR: parfile argument is required in execution line'
+	    write(*,*)
+	    write(*,*)
 	  endif
 
 	  if(rank.eq.0)call ascii_art(2)
@@ -110,10 +115,11 @@ implicit none
 
   endif
 
-  call getarg(1, par_file)
-  call getarg(2, dc_str)
-
-  read(dc_str, *)DC
+  if (icount.ge.1)  call getarg(1, par_file)
+  if (icount.eq.2) then
+	call getarg(2, dc_str)
+	read(dc_str, *)DC
+  endif
 
   if(rank.eq.0)write(*,*)'name par_file: ',trim(adjustl(par_file))
   file_name = trim(adjustl(par_file))
@@ -125,12 +131,6 @@ implicit none
 	call MPI_Abort(MPI_COMM_WORLD, errcode, ierr)
 	stop
   endif
-
-  if(DC.ne.0.or.DC.ne.1.or.DC.ne.2)then
-	if(rank.eq.0)write(*,*)'DC value must be 1 or 2, please introduce flag 1 or 2 at the command line'
-  endif
-
-  if(rank.eq.0)write(*,*) 'DC value is:', DC
 
   su_file0 = 'null'
   su_file_DC0 = 'su_DC0_part_'
@@ -150,7 +150,7 @@ implicit none
 
   print_bat=0
   print_geom=0
-  reg_grid=1
+  reg_grid=0
   byte_shotnumber= byte_fldr
   sx_sy_header=0;offset_header=0;offset_unit=1
   TWT_option=0;
@@ -165,8 +165,10 @@ implicit none
   drec=0;dmodel=0;dt=0;dshots=0;
   shot_depth=0;streamer_depth=0;
   NumRec=0;nt=0;split_parts=1;
-  step_txt=50;
+  step_txt=1;
   save_gmt=0;save_matlab=0;
+  DC_b=-10;
+
   open(fh, file=par_file)
 
   ! ios is negative if an end of record condition is encountered or if
@@ -178,6 +180,9 @@ implicit none
      if (ios == 0) then
         line = line + 1
 
+        ! Verificar si la línea es un comentario
+        if (buffer(1:1) .ne. '#') then
+
         ! Find the first instance of whitespace.  Split label and data.
         pos = scan(buffer,' ')
         label = buffer(1:pos)
@@ -185,8 +190,8 @@ implicit none
 
         select case (label)
 
-!        case ('DC:')
-!           read(buffer, *, iostat=ios) DC
+        case ('DC:')
+           read(buffer, *, iostat=ios) DC_b
         case ('print_bat:')
            read(buffer, *, iostat=ios) print_bat
         case ('print_geom:')
@@ -259,6 +264,9 @@ implicit none
            if(rank.eq.0)print *, 'WARNING in file ',trim(adjustl(par_file)),': skipping invalid label at line', line
 
         end select
+
+        end if  ! Fin del if para verificar comentarios
+
      end if
   end do
 
@@ -289,6 +297,16 @@ far_offset_grid=1+ceiling(far_offset/dmodel)
 
 if(added_space_model_X.eq.0)added_space_model_X=20.*dmodel
 if(added_space_model_Y.eq.0)added_space_model_Y=20.*dmodel
+
+if(DC.lt.0) then
+	if(DC_b.ge.0)DC=DC_b
+endif
+
+if(DC.ne.0.and.DC.ne.1.and.DC.ne.2) then
+if(rank.eq.0)write(*,*)'DC value must be 0, 1 or 2: '
+if(rank.eq.0)write(*,*)'Introduce flag 0, 1 or 2 at the command line, or at the parfile (example, DC: 1)'
+endif
+
 
 if(sx_sy_header.ne.0.and.sx_sy_header.ne.1)	then
 	if(rank.eq.0)write(*,*)'ERROR: sx_sy_header should be set to 0 or 1 in ',trim(adjustl(par_file))
@@ -354,9 +372,9 @@ if(offset_header.eq.0.and.near_offset.eq.0)	then
 	stop
 endif
 
-if(DC.gt.2)    then
+if(DC.ne.0.and.DC.ne.1.and.DC.ne.2)    then
 
-        if(rank.eq.0)write(*,*)'ERROR: wrong value for DC parameter. It must be 1 or 2'
+        if(rank.eq.0)write(*,*)'ERROR: wrong value for DC parameter. It must be 0, 1 or 2'
         if(rank.eq.0)call ascii_art(2)
 
         call MPI_barrier(MPI_COMM_WORLD,ierr)
@@ -411,7 +429,8 @@ if(water_velocity.le.1400)	then
 endif
 endif
 
-if(dshots.eq.0.and.reg_grid.eq.1) then
+if(dshots.eq.0) then
+!if(dshots.eq.0.and.reg_grid.eq.1) then
 	if(rank.eq.0)write(*,*) 'ERROR: Please give an average value to dshots (meters) in ',trim(adjustl(par_file))
         if(rank.eq.0)call ascii_art(2)
 
@@ -483,6 +502,7 @@ maxbytes=1900000000
 
 if(save_matlab.ne.0.or.save_gmt.ne.0)save_txt=1
 
+
 if(rank.eq.0)	then
 
 write(*,*)
@@ -517,9 +537,11 @@ endif
 write(*,*)'offset_header: ',offset_header
 
 if(offset_header.eq.1) then
+	write(*,*)
 	write(*,*)'The .sgy file should contain offset information in headers (variable offset)'
 	write(*,*)'offset_unit: ',offset_unit
 else if(offset_header.eq.0) then
+	write(*,*)
 	write(*,*)'Streamer is considered rigid -fix distance between channels (dmodel)- &
 	and fix value for near offset (near_offset)'
 	write(*,*)'near_offset: ',near_offset
@@ -547,6 +569,30 @@ if(reverse_streamer.ne.0)write(*,*)'reverse_streamer: ',reverse_streamer
 if(vp_exist)write(*,*)'vp_file: ',adjustl(trim(vp_file))
 if(.NOT. vp_exist)write(*,*)'water_velocity constant: ',water_velocity
 !write(*,*)'NumMaxShots_PG,NumMax_PG: ',NumMaxShots_PG,NumMax_PG
+
+write(*,*)
+write(*,*)"CREATING OUTPUT FOLDER"
+command="mkdir "  // trim(adjustl(folder_output))
+write(*,*)trim(adjustl(command))
+call system(command)
+
+if(save_matlab.eq.1)    then
+               write(*,*)
+                write(*,*)"CREATING FOLDER: MATLAB"
+                folder_matlab=trim(adjustl(folder_output))// 'MATLAB/'
+                command="mkdir "  // trim(adjustl(folder_matlab))
+                write(*,*)trim(adjustl(command))
+                call system(command)
+endif
+if(save_gmt.eq.1)       then
+               write(*,*)
+                write(*,*)"CREATING FOLDER: GMT"
+                folder_gmt=trim(adjustl(folder_output))// 'GMT/'
+                command="mkdir "  // trim(adjustl(folder_gmt))
+                write(*,*)trim(adjustl(command))
+                call system(command)
+endif
+
 
 endif
 

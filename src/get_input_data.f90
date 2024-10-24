@@ -349,9 +349,7 @@ implicit none
 	       	        shotID_nav(ii)=shotID
 			xs=(ii-1)*dshots
 			ys=0
-
 		endif
-
 		if(reg_grid.eq.0)	then
 
 			if(sx_sy_header.eq.0)	then
@@ -396,7 +394,7 @@ implicit none
 				length_streamer=abs(offset_su(1,ii)-offset_su(NumRec,ii))
 			endif
 
-		endif	! reg_grid
+		endif	
 
 		NearOffset=abs(near_offset)
 		add1=NearOffset+length_streamer+added_space_model_X !! metros, distancia a (x1,y1)
@@ -446,7 +444,6 @@ implicit none
                 nn=nn+1
                 dd=dd+abs(pos_shot(ishot)-pos_shot(ishot-1))
         enddo
-        if(reg_grid.eq.0)dshots=ceiling(dd/nn)
 
 	n_PG=1+ceiling(far_offset/dshots)    !!numero maximo de shots por PG
 	NumMaxShots_PG=n_PG+ceiling(n_PG/5.)

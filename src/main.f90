@@ -64,7 +64,7 @@ if(rank.eq.0)write(*,*)'*******************************************'
 if(rank.eq.0)write(*,*)'PREPARING AND WRITING INPUT DATA, STEP 0'
 if(rank.eq.0)write(*,*)'*******************************************'
 
-if(DC.le.1)	then
+if(DC.eq.0.or.DC.eq.1)	then
 
 	iDC=0
 	call WRITE_SG0()
