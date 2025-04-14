@@ -23,7 +23,7 @@ cd $input_folder
 
 
 name=$(basename "$input" | cut -d. -f1)
-su_name=${name}
+su_name=${name}.su
 
 #su_name=${input}
 
