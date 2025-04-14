@@ -17,10 +17,10 @@ fi
 cd $input_folder
 
 
-#name=$(basename "$input" | cut -d. -f1)
-#su_name=${name}
+name=$(basename "$input" | cut -d. -f1)
+su_name=${name}
 
-su_name=${input}
+#su_name=${input}
 
 
 if [ "$SGY_SU" = 1 ]; then
