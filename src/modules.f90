@@ -275,6 +275,9 @@ implicit none
 folder_output = trim(adjustl(folder_output)) // '/'
 folder_input = trim(adjustl(folder_input)) // '/'
 
+command="mkdir " // trim(adjustl(folder_output))
+call system(command)
+
 time=(nt-1)*dt
 
 if(dmodel.eq.0)dmodel=drec
