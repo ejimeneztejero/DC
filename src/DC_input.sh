@@ -1,6 +1,8 @@
 #!/bin/bash
 
-# This is givent o facilitate conversion to SU and split the file
+# This script is given to facilitate:
+# - conversion of SGY/SEGY files into SU
+# - and split it into smaller SU files of less than 1.9GB
 # Perhaps this script has to be modified by the user requirements 
 
 echo
