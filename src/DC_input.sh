@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# This is givent o facilitate conversion to SU and split the file
+# Perhaps this script has to be modified by the user requirements 
+
 echo
 read -p 'Press enter if you are already in input folder or write path (ex. /home/user/folder/) :' key
 read -p 'Are you reading SGY file (press 1) or SU file (press 2): ' SGY_SU
