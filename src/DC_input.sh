@@ -41,7 +41,7 @@ if [ "$SGY_SU" = 1 ]; then
 fi 
 
 
-name_part=${su_name}_part_
+name_part=${name}_part_
 
 size=$(wc -c < "$su_name")
 echo "size file: $size" ;
