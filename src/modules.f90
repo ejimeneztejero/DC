@@ -133,12 +133,12 @@ implicit none
   endif
 
   su_file0 = 'null'
-  su_file_DC0 = 'su_DC0_part_'
-  su_file_DC1 = 'su_DC1_part_'
-  su_file_DC2 = 'su_DC2_part_'
+  su_file_DC0 = 'su_DC0'
+  su_file_DC1 = 'su_DC1'
+  su_file_DC2 = 'su_DC2'
 
-  su_file_PG1 = 'su_PG1_part_'
-  su_file_PG2 = 'su_PG2_part_'
+  su_file_PG1 = 'su_PG1'
+  su_file_PG2 = 'su_PG2'
 
   temp_DC1 = 'temp_DC1_part_'
   temp_DC2 = 'temp_DC2_part_'
@@ -386,7 +386,8 @@ if(DC.ne.0.and.DC.ne.1.and.DC.ne.2)    then
 
 endif
 
-!!if(split_parts.eq.0)file_name = trim(adjustl(folder_input)) // trim(adjustl(file_name))
+if(split_parts.eq.1)file_name = trim(adjustl(folder_input)) // trim(adjustl(file_name))
+if(split_parts.gt.1)	then
 
 do ifile=1,split_parts
 	
@@ -406,6 +407,7 @@ do ifile=1,split_parts
 	endif
 
 enddo
+endif
 
 file_name = trim(adjustl(folder_input)) // trim(adjustl(nav_file))
 INQUIRE(FILE=file_name, EXIST=nav_exist)
@@ -579,24 +581,23 @@ command="mkdir "  // trim(adjustl(folder_output))
 write(*,*)trim(adjustl(command))
 call system(command)
 
+endif
+
 if(save_matlab.eq.1)    then
-               write(*,*)
-                write(*,*)"CREATING FOLDER: MATLAB"
+                if(rank.eq.0)write(*,*)
+                if(rank.eq.0)write(*,*)"CREATING FOLDER: MATLAB"
                 folder_matlab=trim(adjustl(folder_output))// 'MATLAB/'
                 command="mkdir "  // trim(adjustl(folder_matlab))
-                write(*,*)trim(adjustl(command))
-                call system(command)
+                if(rank.eq.0)write(*,*)trim(adjustl(command))
+                if(rank.eq.0)call system(command)
 endif
 if(save_gmt.eq.1)       then
-               write(*,*)
-                write(*,*)"CREATING FOLDER: GMT"
+                if(rank.eq.0)write(*,*)
+                if(rank.eq.0)write(*,*)"CREATING FOLDER: GMT"
                 folder_gmt=trim(adjustl(folder_output))// 'GMT/'
                 command="mkdir "  // trim(adjustl(folder_gmt))
-                write(*,*)trim(adjustl(command))
-                call system(command)
-endif
-
-
+                if(rank.eq.0)write(*,*)trim(adjustl(command))
+                if(rank.eq.0)call system(command)
 endif
 
 end subroutine read_parfile

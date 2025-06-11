@@ -417,7 +417,6 @@ allocate(sudata(nt+nh,NumRec))
 allocate(SG(nt,NumRec))
 SG=0.;sudata=0.;
 
-
 	if(iDC.eq.0)unit_DC=unit_DC0
 	if(iDC.eq.1)unit_DC=unit_DC1
 	if(iDC.eq.2)unit_DC=unit_DC2
@@ -455,30 +454,13 @@ enddo
 
 !write(*,*)"ntimes: ",ntimes,nsamples
 
-!if(save_matlab.eq.1)	then
-!               write(*,*)
-!                write(*,*)"CREATING FOLDER: MATLAB"
-!                folder_matlab=trim(adjustl(folder_output))// 'MATLAB/'
-!                command="mkdir "  // trim(adjustl(folder_matlab))
-!                write(*,*)trim(adjustl(command))
-!                call system(command)
-!endif
-!if(save_gmt.eq.1)	then
-!               write(*,*)
-!                write(*,*)"CREATING FOLDER: GMT"
-!                folder_gmt=trim(adjustl(folder_output))// 'GMT/'
-!                command="mkdir "  // trim(adjustl(folder_gmt))
-!                write(*,*)trim(adjustl(command))
-!                call system(command)
-!endif
-
 do itimes=1,ntimes
 
 	icount=(itimes-1)*numtasks+rank+1        !!aquí sucede la paralelización
 
 	if(shotID_(icount).ne.0.and.icount.le.nsamples)	then
 
-!	write(*,*)"here 1, step: ", step
+!	write(*,*)"here 1, step: ", step,icount,shotID_su(icount)
 
 	do i=1,step
 
@@ -511,7 +493,11 @@ do itimes=1,ntimes
 		file_name4 = trim(adjustl(file_name3)) // trim(adjustl(Str)) 
 		file_name5 = trim(adjustl(file_name4)) // ".matlab"
 
-!		write(*,*)"OJOOO saving matlab: ",file_name5,nt,NumRec
+!		write(*,*)icount," 1 OJOOO saving matlab: ", trim(adjustl(file_name))
+!		write(*,*)icount," 2 OJOOO saving matlab: ", trim(adjustl(file_name2))
+!		write(*,*)icount," 3 OJOOO saving matlab: ", trim(adjustl(file_name3))
+!		write(*,*)icount," 4 OJOOO saving matlab: ", trim(adjustl(file_name4))
+!		write(*,*)icount," 5 OJOOO saving matlab: ", trim(adjustl(file_name5))
 
 		open(12,FILE=file_name5,STATUS='unknown')
 	        do k=1,nt
@@ -716,16 +702,25 @@ INTEGER :: ifile
 
 CHARACTER(len=50) :: access,form,num_split
 CHARACTER(len=500) :: file_name
+CHARACTER(len=500) :: file_name1
+CHARACTER(len=500) :: file_name2
+CHARACTER(len=500) :: file_name3
 
 access = 'stream'
 form = 'unformatted'
 
 do ifile=1,split_parts
 
-       	call fun_num_split(split_parts,ifile,num_split)
+	if(split_parts.eq.1)	then
+		file_name = trim(adjustl(folder_input)) // trim(adjustl(su_file0))
+	endif
 
-	file_name = trim(adjustl(su_file0)) // trim(adjustl(num_split))
-	file_name = trim(adjustl(folder_input)) // trim(adjustl(file_name))
+        if(split_parts.gt.1)	then
+	       	call fun_num_split(split_parts,ifile,num_split)
+		file_name = trim(adjustl(su_file0)) // trim(adjustl(num_split))
+		file_name = trim(adjustl(folder_input)) // trim(adjustl(file_name))
+	endif
+
 
 	if(endianness_machine.eq.0)	then
 
@@ -743,7 +738,9 @@ do ifile=1,split_parts
 
 	INQUIRE(FILE=file_name, SIZE=sizeof(ifile) )
 
-        file_name = trim(adjustl(su_file_DC0)) // trim(adjustl(num_split))
+	if(split_parts.eq.1)file_name = trim(adjustl(su_file_DC0)) // ".su"
+        if(split_parts.gt.1)file_name = trim(adjustl(su_file_DC0)) // "_" // trim(adjustl(num_split))
+
         file_name = trim(adjustl(folder_output)) // trim(adjustl(file_name))
         open(unit_DC0+ifile,FILE=file_name,ACCESS=access,FORM=form,CONVERT='BIG_ENDIAN',STATUS='unknown')
 
@@ -753,9 +750,13 @@ if(DC.lt.0.or.DC.ge.1)	then
 
 do ifile=1,split_parts
 
-       	call fun_num_split(split_parts,ifile,num_split)
+        if(split_parts.eq.1)file_name = trim(adjustl(su_file_DC1)) // ".su"
 
-        file_name = trim(adjustl(su_file_DC1)) // trim(adjustl(num_split))
+        if(split_parts.gt.1)    then
+                call fun_num_split(split_parts,ifile,num_split)
+                file_name = trim(adjustl(su_file_DC1)) // "_" // trim(adjustl(num_split))
+        endif
+
         file_name = trim(adjustl(folder_output)) // trim(adjustl(file_name))
         open(unit_DC1+ifile,FILE=file_name,ACCESS=access,FORM=form,CONVERT='BIG_ENDIAN',STATUS='unknown')
 
@@ -767,18 +768,28 @@ if(DC.lt.0.or.DC.ge.2)	then
 
 do ifile=1,split_parts
 
-       	call fun_num_split(split_parts,ifile,num_split)
 
-        file_name = trim(adjustl(su_file_PG1)) // trim(adjustl(num_split))
-        file_name = trim(adjustl(folder_output)) // trim(adjustl(file_name))
+        if(split_parts.eq.1) then
+		file_name1 = trim(adjustl(su_file_PG1))  // ".su"
+        	file_name2 = trim(adjustl(su_file_PG2))  // ".su"
+        	file_name3 = trim(adjustl(su_file_DC2))  // ".su"
+        endif
+
+        if(split_parts.gt.1)    then
+                call fun_num_split(split_parts,ifile,num_split)
+	        file_name1 = trim(adjustl(su_file_PG1)) // "_" // trim(adjustl(num_split))  
+	        file_name2 = trim(adjustl(su_file_PG2)) // "_" // trim(adjustl(num_split))  
+	        file_name3 = trim(adjustl(su_file_DC2)) // "_" // trim(adjustl(num_split))  
+        endif
+
+
+        file_name = trim(adjustl(folder_output)) // trim(adjustl(file_name1))
         open(unit_PG1+ifile,FILE=file_name,ACCESS=access,FORM=form,CONVERT='BIG_ENDIAN',STATUS='unknown')
 
-        file_name = trim(adjustl(su_file_PG2)) // trim(adjustl(num_split))
-        file_name = trim(adjustl(folder_output)) // trim(adjustl(file_name))
+        file_name = trim(adjustl(folder_output)) // trim(adjustl(file_name2))
         open(unit_PG2+ifile,FILE=file_name,ACCESS=access,FORM=form,CONVERT='BIG_ENDIAN',STATUS='unknown')
 
-        file_name = trim(adjustl(su_file_DC2)) // trim(adjustl(num_split))
-        file_name = trim(adjustl(folder_output)) // trim(adjustl(file_name))
+        file_name = trim(adjustl(folder_output)) // trim(adjustl(file_name3))
         open(unit_DC2+ifile,FILE=file_name,ACCESS=access,FORM=form,CONVERT='BIG_ENDIAN',STATUS='unknown')
 
 enddo

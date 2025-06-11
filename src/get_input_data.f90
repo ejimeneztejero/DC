@@ -60,7 +60,7 @@ include 'mpif.h'
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         if(shotID_first_su.ne.shotID_first_nav.or.shotID_last_su.ne.shotID_last_nav)    then
-                if(rank.eq.0)write(*,*)'ERROR: first/last shotID in .su and navigation file must coincide'
+                if(rank.eq.0)write(*,*)'ERROR: first/last shotID in .su and navigation file does not coincide'
                 if(rank.eq.0)call ascii_art(2)
                 call MPI_barrier(MPI_COMM_WORLD,ierr)
                 call MPI_Abort(MPI_COMM_WORLD, errcode, ierr)
@@ -550,9 +550,14 @@ pos_read=byte_shotnumber 	!! fldr o el que sea
 do ifile=1,split_parts
 
 
-        call fun_num_split(split_parts,ifile,num_split)
+	if(split_parts.eq.1)	then
+	        file_name = trim(adjustl(su_file0))
+	endif
+	if(split_parts.gt.1)	then
+	        call fun_num_split(split_parts,ifile,num_split)
+	        file_name = trim(adjustl(su_file0)) // trim(adjustl(num_split))
+	endif
 
-        file_name = trim(adjustl(su_file0)) // trim(adjustl(num_split))
         file_name = trim(adjustl(folder_input)) // trim(adjustl(file_name))
 
 	READ(unit0+ifile,pos=pos_read) shotID_1(ifile)
@@ -561,7 +566,10 @@ do ifile=1,split_parts
 
 	if(rank.eq.0)	then
 		write(*,*)trim(adjustl(file_name)),&
-		', contains shots from ',shotID_1(ifile),' to ',shotID_n(ifile)
+		', contains shots from ',shotID_1(ifile),' to ',shotID_n(ifile),&
+		'size is: ',ifile,sizeof(ifile),(nh+nt)*NumRec*4+pos_read,&
+		nh,nt,NumRec,pos_read,(nh+nt)*NumRec*4+pos_read
+
 	endif
 
 	if(ifile.eq.1)READ(unit0+ifile,pos=pos_read) shotID_first_su
@@ -621,9 +629,16 @@ pos_byte=1
 icount=1
 ifile=1
 
-call fun_num_split(split_parts,ifile,num_split)
 
-file_name = trim(adjustl(su_file0)) // trim(adjustl(num_split))
+        if(split_parts.eq.1)    then
+        file_name = trim(adjustl(su_file0))
+        endif
+        if(split_parts.gt.1)    then
+        call fun_num_split(split_parts,ifile,num_split)
+        file_name = trim(adjustl(su_file0)) // trim(adjustl(num_split))
+        endif
+        
+
 file_name = trim(adjustl(folder_input)) // trim(adjustl(file_name))
 
 READ(unit0+ifile,pos=pos_byte+pos_read-1) shotID
@@ -732,9 +747,14 @@ do while(shotID.ge.shot_init.and.shotID.le.shot_fin)
 
 	endif
 
+        if(split_parts.eq.1)    then
+        file_name = trim(adjustl(su_file0))
+        endif
+        if(split_parts.gt.1)    then
         call fun_num_split(split_parts,ifile,num_split)
-
         file_name = trim(adjustl(su_file0)) // trim(adjustl(num_split))
+        endif
+        
         file_name = trim(adjustl(folder_input)) // trim(adjustl(file_name))
 
 	READ(unit0+ifile,pos=pos_byte+pos_read-1) shotID

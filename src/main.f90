@@ -71,7 +71,7 @@ if(DC.eq.0.or.DC.eq.1)	then
 	call MPI_barrier(MPI_COMM_WORLD,ierr)
 
 	if(save_txt.ne.0) then
-		if(rank.eq.0)write(*,*)'SAVING TXT DATA'
+		if(rank.eq.0) write(*,*)'SAVING TXT DATA'
 		call SAVE_SHOTS_TXT(iDC)
 	endif
 
