@@ -1,0 +1,489 @@
+\documentclass[11pt, oneside]{article}   	% use "amsart" instead of "article" for AMSLaTeX format
+\usepackage{geometry}                		% See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   		% ... or a4paper or a5paper or ... 
+%\geometry{landscape}                		% Activate for rotated page geometry
+%\usepackage[parfill]{parskip}    		% Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}				% Use pdf, png, jpg, or eps§ with pdflatex; use eps in DVI mode
+\usepackage{amssymb}
+\usepackage{hyperref}
+\hypersetup{
+ colorlinks=true,
+ linkcolor=blue,
+ filecolor=magenta, 
+ urlcolor=cyan,
+}
+\urlstyle{same}
+
+
+%\usepackage[spanish, es-nolayout]{babel}
+%\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+
+\usepackage{amsmath, amsthm, amsfonts}
+\usepackage{tabularx}
+\usepackage{amssymb,latexsym}
+\usepackage{graphicx}
+%\usepackage[titletoc]{appendix}
+\usepackage{color}
+\usepackage{authblk}
+\usepackage{epstopdf}
+\usepackage{xr}
+\usepackage{cleveref}
+
+
+
+\title{\textbf{User guide}\\Downward Continuation to the seafloor of streamer data}
+
+\author{Author: Clara Estela Jim\'enez Tejero. \\
+Developed at BCSI group at ICM-CSIC (Barcelona, Spain).}
+
+\date{}							% Activate to display a given date or no date
+
+\begin{document}
+\maketitle
+\begin{abstract}
+This is the new version (tag \texttt{v2}) of the software for Downward Continuation (DC) of marine MCS field data. The improvements with respect to the previous version (tag \texttt{v1}) are:
+
+\begin{itemize}
+    \item \textbf{Automated data preparation:} The code now fully automates the preparation of input data. It converts SGY files to SU format and splits the main SU file into smaller parts to ensure compatibility with Fortran. This process is handled by running the code with option \texttt{DC: 0}. Input is accepted directly in SGY or SU format. For standard SGY data (big endian) and common machines (little endian), both formats are supported. In rare cases of little-endian SGY data, the user must convert the file to SU format manually and set the data and machine endianness parameter properly.
+
+    \item \textbf{Automated output generation:} The creation of the SU and SGY final files after each step is now automated.
+
+    \item \textbf{One-step MCS DC execution:} The DC process for MCS data, which consists of two steps, can now be performed in a single run using \texttt{DC: 3}. This option combines step 0 (data preparation), step 1 (receiver redatuming), and step 2 (source redatuming). Due to potential I/O latency, especially when step 2 depends on outputs from step 1, users may prefer to run each step separately to ensure stable execution.
+
+    \item \textbf{Updated input parameter file:} The input parameter file structure has been revised and improved. Details are provided in \ref{sec4a}.
+
+    \item \textbf{New case:} When geometry information for sources and receivers is completely absent, the code handles this by creating a default regular geometry (setting parameter \texttt{reg\_grid}: 1). This generation relies on the supplied experimental parameters, specifically the number of receivers (\texttt{NumRec}), and the interdistance between receivers (\texttt{drec}) and between shot gathers (\texttt{dshots}). Details are provided in \ref{sec4a} and \ref{sec4b}.
+
+    \item \textbf{Test dataset included:} A dataset has been uploaded to Zenodo for testing and validation of the software. Available at zenodo \cite{estela2}, at doi:\\ \url{https://doi.org/10.5281/zenodo.15857062}.
+\end{itemize}
+
+
+
+\end{abstract}
+
+\newpage
+
+\section{Introduction}
+
+
+One of the most widely used methods for extracting refraction information from Multichannel Seismic (MCS) data is the downward continuation technique. It is designed to redatum streamer field data to the seafloor. In this virtual configuration, early refractions are transformed into first arrivals that become visible from nearly zero offset, greatly facilitating their identification and use in travel-time tomography.
+
+We present a user-friendly, open-source HPC software package for redatuming 2D streamer field data to the seafloor, adaptable to any bathymetric relief. The core of the method is the acoustic wave equation applied backward in time. The process consists of three main steps, which can either be executed independently — data preparation (\texttt{DC: 0}), receiver redatuming (\texttt{DC: 1}), and source redatuming (\texttt{DC: 2}) — or combined into a single execution (\texttt{DC: 3}).
+
+The required inputs include a single SGY or SU file containing the shot gathers, and an ASCII file providing bathymetric information for each shot gather. Additional parameters must be supplied in a user-defined input file, which is read at execution and remains valid across all the steps (\texttt{DC: 0}, \texttt{1}, \texttt{2}, or \texttt{3}).
+
+By default, a constant P-wave velocity model is assumed for the water column. However, users can optionally provide XBT data to build a more detailed velocity model. Still, as demonstrated in \cite{estela}, using a homogeneous water model yields comparable results even in deep-water cases, and is therefore recommended for simplicity and robustness.
+
+For more information on the physical basis of the implementation, refer to the reference preprint \cite{estela}. This source also discusses which types of streamer data are suitable for downward continuation, and outlines the validity limits of the method.
+
+
+
+
+\section{Software requirements}\label{sec1}
+
+\begin{itemize}
+    \item The DC software is open-source and developed in Fortran 90 for high-performance computing (HPC) environments using OpenMPI.
+    
+    \item Parallel compilation and execution are required. The system must have the \texttt{mpif90} compiler for comilation and the \texttt{mpirun} command for execution.
+    
+    \item The Seismic Unix (SU) software package \cite{SU} must be installed. A basic understanding of SU is recommended, as it is essential for handling, converting, and visualizing seismic binary data.
+    
+    \item Due to the computational cost in big MCS data sets, it is recommended to run the software on a computing cluster or HPC environment.
+\end{itemize}
+
+
+\section{Installation}\label{sec2}
+
+\begin{itemize}
+    \item To compile the code, open a terminal and navigate to the \texttt{src/} directory. Then run:
+    \begin{quote}
+        \textbf{make}
+    \end{quote}
+    
+    \item Alternatively, manual compilation can be performed as follows:
+    \begin{itemize}
+        \item First, compile the modules:
+        \begin{quote}
+            \textbf{mpif90 -c modules.f90}
+        \end{quote}
+        
+        \item Then, compile all source files and generate the executable \texttt{DC\_MCS\_run}:
+        \begin{quote}
+            \textbf{mpif90 *.f90 -o DC\_MCS\_run}
+        \end{quote}
+    \end{itemize}
+    
+    \item After successful compilation, add the \texttt{src/} directory to your \texttt{\$PATH} by appending the following line to your \texttt{.bashrc} file:
+    \begin{quote}
+        \textbf{export PATH="/home/user/path/to/src:\$PATH"}
+    \end{quote}
+\end{itemize}
+
+
+\section{Quick start}\label{sec3}
+
+\begin{itemize}
+    \item Fill in all the required parameters in the input file, as described in Section~\ref{sec4a}.
+    
+    \item Prepare the input folder with the following:
+    \begin{itemize}
+        \item Shot gather data in SGY or SU format (see Section~\ref{sec4c}).
+        \item Bathymetry information for each shot gather in a single ASCII file. If navigation is not included in the SU headers, it must be provided in this file as well (see Section~\ref{sec4b}).
+    \end{itemize}
+    
+    \item To execute the program, two command-line arguments are required:
+    \begin{enumerate}
+        \item The name of the input parameter file (\texttt{parfile}).
+        \item A number indicating the processing step: \texttt{0}, \texttt{1}, \texttt{2}, or \texttt{3}. These correspond to:
+    \end{enumerate}
+
+    \begin{itemize}
+        \item Step 0 (data preparation):\\
+        \textbf{mpirun -np numtasks DC\_MCS\_run parfile 0}
+        
+        \item Step 1 (receiver redatuming):\\
+        \textbf{mpirun -np numtasks DC\_MCS\_run parfile 1}
+        
+        \item Step 2 (source redatuming):\\
+        \textbf{mpirun -np numtasks DC\_MCS\_run parfile 2}
+        
+        \item Step 3 (full process: steps 0+1+2 in a single execution):\\
+        \textbf{mpirun -np numtasks DC\_MCS\_run parfile 3}
+    \end{itemize}
+
+    \item In these commands, \texttt{numtasks} refers to the number of parallel processes (cores) to use. The optimal number depends on the step:
+    \begin{itemize}
+        \item For step \texttt{DC: 0}, only one task is needed.
+        \item For step \texttt{DC: 1}, the most efficient value is the number of shot gathers.
+        \item For step \texttt{DC: 2}, the most efficient value is the number of point gathers.
+    \end{itemize}
+
+    \item The number of point gathers (\texttt{NumPGs}) can be estimated with the following formula:
+    
+    \begin{equation}
+    \text{NumPGs} = 1 + \frac{\text{SL} + (\text{NumShots} - 1) \cdot \text{dshots}}{\text{dmodel}} ~,
+    \end{equation}
+    
+    where \texttt{SL} is the streamer length, \texttt{dshots} is the distance between shot gathers, and \texttt{dmodel} is the spatial grid resolution (\texttt{dmodel} $<$ \texttt{dshots}).
+    
+    \item When running step \texttt{DC: 3}, it is safe to select the maximum number of available tasks on the machine. Unused tasks will simply remain idle.
+\end{itemize}
+
+
+\section{Input data}\label{sec4}
+
+Three types of input are required to run the DC software:
+
+\begin{itemize}
+\item Section~\ref{sec4a} describes the parameters to include in the input parameter file.
+\item Section~\ref{sec4c} details the requirements for the shot gather input data, also located in the input folder.
+\item Section~\ref{sec4b} explains how to provide the bathymetry (and optionally the navigation) for each shot gather, located in the input folder.
+\end{itemize}
+
+It is understood that in some cases, a few shot gathers or navigation entries may be missing or not recorded. These cases are handled by the code. However, it is a strict requirement that the first and last shot gathers listed in the bathymetry file (Section~\ref{sec4b}) and in the SGY/SU data (Section~\ref{sec4c}) must coincide.
+
+\subsection{Input parameter file}\label{sec4a}
+
+The input parameter file is a plain ASCII text file consisting of lines with the following format:
+
+\begin{quote}
+\texttt{parameter\_name: value}
+\end{quote}
+
+Example:
+
+\begin{quote}
+\texttt{parameter\_1: value\_1} \\
+\texttt{parameter\_2: value\_2} \\
+\texttt{...} \\
+\texttt{parameter\_n: value\_n}
+\end{quote}
+
+The file can have any name and remains valid for all processing steps (\texttt{DC: 0}, \texttt{1}, \texttt{2}, or \texttt{3}).
+
+It is recommended that the user be familiar with the SU/SGY header structure, as several parameters are extracted from header fields. Below is a list of the available parameters and their usage. Not all parameters are required in every case. The list of parameters are described in the following lines (all of them might not be necessary):
+
+\begin{itemize}
+
+\item \texttt{input\_folder} (string):\\
+Path to the folder containing the input files.\\
+Example: \texttt{/home/user/DCtest/data/input}
+
+\item \texttt{output\_folder} (string):\\
+Path where the output files will be stored.The folder is automatically created at the given path if it does not exist yet.\\
+Default: \texttt{output}.
+
+\item \texttt{data\_file} (string):\\
+Name of the SGY or SU binary file containing the recorded shot gathers.\\
+Must be located inside input folder.
+
+\item \texttt{data\_format} (integer):\\
+Automatically inferred by the code. If detection fails, set manually:\\
+\texttt{1} = SGY format, \texttt{2} = SU format.\\
+\textbf{Optional.} (Only if auto-detection fails.)
+
+\item \texttt{nav\_file} (string):\\
+Name of the ASCII file containing bathymetry and optionally navigation information.\\
+Must be located inside input folder.\\
+See Section~\ref{sec4b} for details.
+
+\item \texttt{byte\_shotnumber} (integer):\\
+Byte position in the SU header where the shot ID is stored.\\
+Example: \texttt{9} (for \texttt{fldr} header).\\
+Default: \texttt{9}.
+
+\item \texttt{sx\_sy\_header} (integer):\\
+Set to \texttt{1} to read shot positions from SU headers (\texttt{sx}, \texttt{sy}); in this case, \texttt{scalco} is also read.\\
+If set to \texttt{0}, shot positions must be provided in the nav\_file (see Section~\ref{sec4b}).\\
+Default: \texttt{0}.
+
+\item \texttt{offset\_header} (integer):\\
+Set to \texttt{1} to read receiver offsets from the SU header field \texttt{offset}.\\
+If set to \texttt{0}, receiver positions are calculated assuming regular spacing using \texttt{drec} and \texttt{streamer\_depth}.\\
+Default: \texttt{0}.
+
+\item \texttt{offset\_unit} (integer):\\
+Scaling factor for the offset if \texttt{offset\_header} is set to \texttt{1}.\\
+Default: \texttt{1}.\\
+Offset is computed as:
+\[
+\text{offset} =
+\begin{cases}
+\text{offset}^{(\text{header})} \cdot \text{offset\_unit} & \text{if } \text{offset\_unit} > 0 \\
+\text{offset}^{(\text{header})} / |\text{offset\_unit}| & \text{if } \text{offset\_unit} < 0
+\end{cases}
+\]
+
+\item \texttt{TWT\_option} (integer):\\
+Set to \texttt{1} if bathymetry is given as Two-Way Travel Time (in seconds).\\
+If set to \texttt{0}, bathymetry must be in meters.\\
+Default: \texttt{0}. See Section~\ref{sec4b}.
+
+\item \texttt{reg\_grid} (integer):\\
+This is a needed parameter in case of no having geometry for sources and receivers. The code will build a regular geometry using the parameters drec, NumRec and dshots. \\
+If set to \texttt{1}, the nav\_file should only contain two columns, shotID and bathymetry (see section~\ref{sec4b}).\\
+Default: \texttt{0} (it is not activated by default).
+
+\item \texttt{reverse\_streamer} (integer):\\
+Set to \texttt{1} if channel number 1 corresponds to the furthest receiver.\\
+Default: \texttt{0} (channel 1 is the closest receiver).\\
+Note: Output data from all DC steps is standardized to \texttt{reverse\_streamer: 0}.
+
+\item \texttt{nt} (integer):\\
+Number of time samples.\\
+
+\item \texttt{dt} (real):\\
+Time sampling interval of the shot gathers (in seconds).\\
+
+\item \texttt{shot\_init} (integer):\\
+Shot ID of the first shot from SGY/SU file.\\
+
+\item \texttt{shot\_fin} (integer):\\
+Shot ID of the last shot from SGY/SU file.\\
+
+\item \texttt{shot\_depth} (real):\\
+Depth of the shot sources (in meters).\\
+
+\item \texttt{dshots} (real):\\
+Distance between consecutive shots (in meters). \\
+
+\item \texttt{near\_offset} (real):\\
+Distance between shot position and nearest receiver (in meters).\\
+
+\item \texttt{drec} (real):\\
+Distance between receivers (in meters).\\
+
+\item \texttt{NumRec} (integer):\\
+Number of receivers per shot.\\
+
+\item \texttt{streamer\_depth} (real):\\
+Depth of the receivers (in meters).\\
+
+\item \texttt{dmodel} (real):\\
+Spatial sampling interval of the velocity model (in meters).\\
+Default: equal to \texttt{drec}.\\
+Must fulfill the CFL stability condition: 
+\[
+\frac{\texttt{dmodel}}{\texttt{dt}} \geq \sqrt{2} \cdot \max(V_p)
+\]
+
+\item \texttt{water\_velocity} (real):\\
+Constant water velocity (in meters/second).\\
+Default: \texttt{1500}.
+
+\item \texttt{vp\_file} (string):\\
+Name of the file containing XBT data for building a variable water velocity model.\\
+Optional. If not provided, \texttt{water\_velocity} is used.\\
+Format example:
+\begin{quote}
+1008 \quad vp\_1.dat\\
+5400 \quad vp\_2.dat\\
+9821 \quad vp\_3.dat
+\end{quote}
+Each file (\texttt{vp\_n.dat}) must have two columns: depth (m) and velocity (m/s).\\
+See \cite{estela} and \cite{Mackenzie} for details.
+
+\item \texttt{save\_gmt} (integer):\\
+Set to \texttt{1} to save shot gathers in GMT-compatible ASCII format:\\
+\texttt{X(1:NumRec), Y(1:nt), Z=shot gather}.\\
+Default: \texttt{0} (not activated).
+
+\item \texttt{save\_matlab} (integer):\\
+Set to \texttt{1} to save shot gathers in MATLAB-compatible ASCII format:\\
+\texttt{shot\_gather(nt, NumRec)}.\\
+Default: \texttt{0} (not activated).
+
+\item \texttt{shot\_step\_txt} (integer):\\
+Shot interval for exporting ASCII files when using \texttt{save\_gmt} and/or \texttt{save\_matlab}.\\
+Default: \texttt{1}.\\
+Example: If \texttt{shot\_init: 1000} and \texttt{shot\_fin: 2000}, a value of \texttt{100} will save shots 1000, 1100, 1200, ..., 2000.
+
+\end{itemize}
+
+\subsection{Shot gathers}\label{sec4c}
+
+The shot gathers recorded during a marine seismic survey are typically stored in a binary SGY-formatted file. This software accepts an SGY file as the initial input. It is automatically converted to SU format and then split into smaller files (each less than 2~GB) to ensure compatibility with Fortran memory handling. It is also accepted a single SU file directly.
+
+In rare cases where the SGY data are stored in little-endian format (e.g., vintage datasets), the automatic conversion may fail. In such cases, the user must manually convert the SGY file to SU format before using the software. The SU file would then be provided directly as input.
+
+To manually convert an SGY file into SU format, you can use the segyread command from the Seismic Unix (SU) toolkit and set the different options properly. After conversion, make sure to check that headers (e.g., \texttt{fldr}, \texttt{sx}, \texttt{sy}, \texttt{offset}) contain the correct information, as these might be needed by the DC software.
+
+
+\subsection{Bathymetry and geometry/navigation information}\label{sec4b}
+
+Bathymetry information must be provided in an ASCII file \texttt{nav\_file}. Depending on the parameters \texttt{sx\_sy\_header} and \texttt{TWT\_option}, navigation data may also need to be included in the same file.
+
+There are different possible configurations for the structure of the bathymetry/navigation file. 
+\begin{itemize}
+    \item \textbf{Case 1:} \texttt{sx\_sy\_header: 0} and \texttt{TWT\_option: 0} \\
+    The navigation must be provided in the ASCII file. The file must contain four columns:
+
+    \begin{quote}
+    shotID$_1$ \quad X$_1$ (UTM, m) \quad Y$_1$ (UTM, m) \quad Z$_1$ (depth, m) \\
+    shotID$_2$ \quad X$_2$ (UTM, m) \quad Y$_2$ (UTM, m) \quad Z$_2$ (depth, m) \\
+    \quad \vdots \\
+    shotID$_n$ \quad X$_n$ (UTM, m) \quad Y$_n$ (UTM, m) \quad Z$_n$ (depth, m)
+    \end{quote}
+
+    \item \textbf{Case 2:} \texttt{sx\_sy\_header: 0} and \texttt{TWT\_option: 1} \\
+    The file must still have four columns, but the bathymetry is expressed in TWT (seconds):
+
+    \begin{quote}
+    shotID$_1$ \quad X$_1$ (UTM, m) \quad Y$_1$ (UTM, m) \quad TWT$_1$ (s) \\
+    shotID$_2$ \quad X$_2$ (UTM, m) \quad Y$_2$ (UTM, m) \quad TWT$_2$ (s) \\
+    \quad \vdots \\
+    shotID$_n$ \quad X$_n$ (UTM, m) \quad Y$_n$ (UTM, m) \quad TWT$_n$ (s)
+    \end{quote}
+
+    \item \textbf{Case 3:} \texttt{sx\_sy\_header: 1} and \texttt{TWT\_option: 0} \\
+    Navigation is read from the SU file headers. The ASCII file must contain two columns with shotID and seafloor depth (in meters):
+
+    \begin{quote}
+    shotID$_1$ \quad Z$_1$ (depth, m) \\
+    shotID$_2$ \quad Z$_2$ (depth, m) \\
+    \quad \vdots \\
+    shotID$_n$ \quad Z$_n$ (depth, m)
+    \end{quote}
+
+    \item \textbf{Case 4:} \texttt{sx\_sy\_header: 1} and \texttt{TWT\_option: 1} \\
+    Navigation is read from the SU file headers. The ASCII file must contain two columns with shotID and TWT (in seconds):
+
+    \begin{quote}
+    shotID$_1$ \quad TWT$_1$ (s) \\
+    shotID$_2$ \quad TWT$_2$ (s) \\
+    \quad \vdots \\
+    shotID$_n$ \quad TWT$_n$ (s)
+    \end{quote}
+    
+    \item \textbf{Case: no geometry available at all} When source and receiver geometry is unavailable, set  \texttt{reg\_grid} to 1. In this scenario, the  \texttt{nav\_file} should be structured like cases 3 or 4, and no header information is expected or required in headers  of your seismic file.
+
+    
+\end{itemize}
+
+
+\vspace{0.5em}
+\noindent
+\textbf{Notes:}
+\begin{itemize}
+    \item Coordinates X and Y are given in Universal Transverse Mercator (UTM), in meters.
+    \item The shotID must be a positive integer: shotID$_i > 0$. It usually matches the \texttt{fldr} header value in SU files.
+    \item Seafloor depth Z$_i$ can be provided as a positive or negative number. Internally, the absolute value $|Z_i|$ is used.
+    \item Two-Way Traveltime values TWT$_i$ must always be positive: TWT$_i > 0$.
+\end{itemize}
+
+\section{Output data}\label{sec5}
+
+\begin{itemize}
+
+\item After execution of the different DC steps, the output files are located in the subfolders \texttt{DATA/} and \texttt{DATA/PARTS} inside the specified output folder. The main SU files generated are:
+
+\begin{itemize}
+    \item \textbf{DC: 0 – DC0 shot gathers (SU format)}\\
+    These shot gathers are generated after executing the code with argument \texttt{0} or \texttt{3}. The input shot gathers are checked, rewritten, and reorganized (in case of reversed geometry) in this step. File names follow the pattern:\\
+    Final file: \texttt{su\_DC0.su}.\\
+    Splitted in parts in output folder: 'DATA/PARTS':
+    \texttt{su\_DC0\_i} where~\texttt{i = 0,...,N-1}. These files are used as input for steps DC: 1.
+
+    \item \textbf{DC: 1 – DC1 shot gathers (SU format)}\\
+   Final file: \texttt{su\_DC1.su}.\\
+    Splitted in parts in output folder: 'DATA/PARTS':
+    \texttt{su\_DC1\_i} where~\texttt{i = 0,...,N-1}. These files are used as input for steps DC: 2.
+
+    \item \textbf{DC: 2 – DC2 shot gathers (SU format)}\\
+    Final file: \texttt{su\_DC2.su}.\\
+    Splitted in parts in output folder: 'DATA/PARTS':
+    \texttt{su\_DC2\_i} where~\texttt{i = 0,...,N-1}.
+
+    \item \textbf{DC: 3 – Full execution (DC0 + DC1 + DC2)}\\
+    When argument \texttt{3} is used, all three steps are executed consecutively, generating all above outputs.
+    
+    \item \textit{Note:} Regardless of the original geometry, the output shot gathers from steps 0, 1, and 2 are stored in a standardized layout: channel number 1 corresponds to the receiver closest to the shot position. If your input data have reversed geometry (i.e., the furthest receiver is channel 1), make sure to set \texttt{reverse\_streamer: 1} in the input parameter file.
+\end{itemize}
+
+\item Additional SU files generated after step DC:2 in output folder: 'DATA/PARTS', include:
+
+\begin{itemize}
+    \item \textbf{PG1 – Point gathers from DC1 (SU format)}\\
+    File names: \texttt{su\_PG1\_i}, where~\texttt{i = 0,...,N-1}.
+
+    \item \textbf{PG2 – Point gathers from DC2 (SU format)}\\
+    File names: \texttt{su\_PG2\_i}, where~\texttt{i = 0,...,N-1}.
+\end{itemize}
+
+\item Common files generated after DC steps 1, 2 (or 3) include:
+
+\begin{itemize}
+    \item \textbf{Bathymetry files in \texttt{BAT/} folder:}
+    \begin{itemize}
+        \item \texttt{bat\_model.dat} — Interpolated bathymetry on the model grid. Two columns: X position (m) and depth (m).
+        \item \texttt{bat\_shots.dat} — Bathymetry at shot positions interpolated to the model grid. Two columns: ShotID and depth.
+        \item \texttt{bat\_recs.shot.\textit{i}.dat} — Receiver bathymetry per shot. Two columns: receiver number and depth.
+    \end{itemize}
+
+    \item \textbf{Geometry files in \texttt{GEOM/} folder:}
+    \begin{itemize}
+        \item \texttt{geom\_shots.dat} — Shot geometry interpolated to the model grid. Two columns: ShotID and X position (m).
+        \item \texttt{geom\_recs.shot.\textit{i}.dat} — Receiver geometry per shot. Two columns: receiver number and X position (m). The X-axis is adjusted so that the furthest receiver from the first shot is located at \texttt{0 m}.
+    \end{itemize}
+
+    \item \texttt{Vp\_model.txt} (ASCII):\\
+    2D P-wave velocity model used for the water column (only generated when \texttt{vp\_file} is provided).
+    
+    \end{itemize}
+
+    
+\end{itemize}
+
+
+\begin{thebibliography}{999}
+
+\bibitem{estela} Clara Estela Jimenez Tejero, Cesar R. Ranero, Valenti Sallares and Claudia Gras. 'Open source downward continuation to the seafloor of streamer data', arXiv, physics.geo-ph, 2106.00646, 2021.\url{https://arxiv.org/abs/2106.00646}.
+
+\bibitem{estela2} Jimenez Tejero, C. E. (2025). Data sample for testing the code: Downward Continuation (DC) for MCS data [Data set]. \\
+Zenodo. \url{https://doi.org/10.5281/zenodo.15857062}.
+
+\bibitem{SU}Murillo, Alejandro E. and J. Bell. “Distributed Seismic Unix: a tool for seismic data processing.” Concurrency and Computation: Practice and Experience 11 (1999): 169-187. Seismic Unix tool: \url{https://wiki.seismic-unix.org/doku.php}.
+\bibitem{Mackenzie}K.V. Mackenzie, Nine-term equation for the sound speed in the oceans (1981) J. Acoust. Soc. Am. 70(3), 807-812. https://doi.org/10.1121/1.386920.
+\end{thebibliography}
+
+\end{document}  
