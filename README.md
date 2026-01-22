@@ -1,7 +1,7 @@
-# User Manual: Downward Continuation of Streamer Data to the Seafloor 
+# User Manual: Downward Continuation of MCS marine field data to the Seafloor 
 - While this software is freely available, we would be grateful if you could send an email to ejimenez@icm.csic.es to acknowledge your usage.
 
-This README provides an overview and instructions for using the Downward Continuation (DC) software for marine field data. DC is a virtual transformation of shot gathers from datum 1 (shots and receivers at the sea surface) to datum 2 (shots and receivers at the seafloor). This redatuming process enhances the visibility of refractions in the data by removing the interference caused by seafloor reflections. The DC process consists of two steps:
+This README provides an overview and instructions for using the Downward Continuation (DC) software for MCS marine field data. DC is a virtual transformation of shot gathers from datum 1 (shots and receivers at the sea surface) to datum 2 (shots and receivers at the seafloor). This redatuming process enhances the visibility of refractions in the data by removing the interference caused by seafloor reflections. The DC process consists of two steps:
 
 - DC<sub>1</sub>: Downward continuation of the receivers at each shot gather to datum 2.
 - DC<sub>2</sub>: Downward continuation of the shot gathers to datum 2.
