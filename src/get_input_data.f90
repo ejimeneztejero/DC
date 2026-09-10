@@ -113,7 +113,8 @@ include 'mpif.h'
         datum1_rec=1+ceiling(streamer_depth/dmodel)     !! superficie 1 receivers
         datum2=bat_model_grid                         	!! superficie 2
 
-        ny=maxval(datum2)
+        !!ny=maxval(datum2)
+        ny=1+ceiling(maxval(pos_bat)/dmodel)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!     Superficies datum1 y datum2
